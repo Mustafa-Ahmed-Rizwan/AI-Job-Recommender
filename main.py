@@ -38,6 +38,13 @@ app.add_middleware(
 resume_processor = None
 skill_analyzer = None
 
+
+CITIES = {
+    "Pakistan": ["Karachi", "Lahore", "Islamabad", "Rawalpindi", "Faisalabad", "Multan", "Hyderabad", "Peshawar", "Quetta", "Sialkot"],
+    "India": ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune", "Ahmedabad", "Jaipur", "Surat"],
+    "USA": ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
+}
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize processors on startup"""
@@ -294,6 +301,11 @@ async def analyze_skills_async(resume_id: str, background_tasks: BackgroundTasks
         "message": "Analysis started in background",
         "status": "processing"
     }
+@app.get("/cities/{country}")
+async def get_cities(country: str):
+    """Get cities for a given country"""
+    cities = CITIES.get(country, [])
+    return {"cities": cities, "country": country}
 
 # Error handlers
 @app.exception_handler(404)

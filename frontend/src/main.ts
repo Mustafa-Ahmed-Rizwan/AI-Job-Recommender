@@ -252,7 +252,9 @@ const displayResumeInfo = (resumeInfo: ResumeInfo) => {
 // Job Search Functions
 const searchJobs = async () => {
   const jobQuery = (document.getElementById('job-query') as HTMLInputElement)?.value?.trim();
-  const location = (document.getElementById('location') as HTMLInputElement)?.value?.trim() || 'Pakistan';
+  const country = (document.getElementById('country-select') as HTMLSelectElement)?.value || 'Pakistan';
+  const city = (document.getElementById('city-select') as HTMLSelectElement)?.value;
+  const location = city ? `${city}, ${country}` : country;
   const numJobs = parseInt((document.getElementById('num-jobs') as HTMLSelectElement)?.value || '20');
   
   if (!jobQuery) {
@@ -979,6 +981,30 @@ const setupEventListeners = () => {
   resumeInput?.addEventListener('change', (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) handleFileUpload(file);
+  });
+  
+  document.getElementById('country-select')?.addEventListener('change', async (e) => {
+    const country = (e.target as HTMLSelectElement).value;
+    const citySelect = document.getElementById('city-select') as HTMLSelectElement;
+    
+    try {
+      citySelect.disabled = true;
+      citySelect.innerHTML = '<option value="">Loading cities...</option>';
+      
+      const result = await apiService.getCities(country);
+      
+      citySelect.innerHTML = '<option value="">Select City (Optional)</option>';
+      result.cities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        citySelect.appendChild(option);
+      });
+      citySelect.disabled = false;
+    } catch (error) {
+      citySelect.innerHTML = '<option value="">Error loading cities</option>';
+      showToast('Error loading cities', 'error');
+    }
   });
   
   // Navigation buttons
