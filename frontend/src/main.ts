@@ -397,6 +397,74 @@ const displayJobs = (jobs: Job[]) => {
     window.lucide.createIcons();
   }
 };
+// Add this function
+const getSuggestions = async () => {
+  if (!appState.resumeInfo) {
+    showToast('Please upload your resume first.', 'warning');
+    return;
+  }
+  
+  const suggestionsLoading = document.getElementById('suggestions-loading');
+  const suggestionsContent = document.getElementById('suggestions-content');
+  const getSuggestionsBtn = document.getElementById('get-suggestions-btn');
+  
+  try {
+    // Show loading
+    getSuggestionsBtn?.setAttribute('disabled', 'true');
+    suggestionsLoading?.classList.remove('hidden');
+    suggestionsContent?.classList.add('hidden');
+    
+    const result = await apiService.getSuggestedJobs(appState.resumeInfo);
+    
+    // Display suggestions
+    displaySuggestions(result.suggestions);
+    
+    // Show content
+    suggestionsLoading?.classList.add('hidden');
+    suggestionsContent?.classList.remove('hidden');
+    
+    showToast('Job suggestions generated!');
+    
+  } catch (error: any) {
+    suggestionsLoading?.classList.add('hidden');
+    showToast(error.response?.data?.detail || 'Error getting suggestions', 'error');
+  } finally {
+    getSuggestionsBtn?.removeAttribute('disabled');
+  }
+};
+
+const displaySuggestions = (suggestions: string[]) => {
+  const suggestionsGrid = document.getElementById('suggestions-grid');
+  if (!suggestionsGrid || !suggestions.length) return;
+  
+  suggestionsGrid.innerHTML = suggestions.map(suggestion => `
+    <button onclick="searchWithSuggestion('${suggestion}')" 
+            class="group p-4 bg-white rounded-lg border border-blue-200 hover:border-blue-400 hover:shadow-md transition-all duration-200 text-left">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 bg-blue-100 group-hover:bg-blue-200 rounded-lg flex items-center justify-center transition-colors">
+          <i data-lucide="briefcase" class="w-4 h-4 text-blue-600"></i>
+        </div>
+        <div>
+          <div class="font-medium text-gray-900 text-sm">${suggestion}</div>
+          <div class="text-xs text-gray-500 group-hover:text-gray-600">Click to search</div>
+        </div>
+      </div>
+    </button>
+  `).join('');
+  
+  // Initialize lucide icons
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+};
+
+const searchWithSuggestion = (suggestion: string) => {
+  const jobQueryInput = document.getElementById('job-query') as HTMLInputElement;
+  if (jobQueryInput) {
+    jobQueryInput.value = suggestion;
+    searchJobs();
+  }
+};
 
 // Analysis Functions
 const startAnalysis = async () => {
@@ -1006,6 +1074,8 @@ const setupEventListeners = () => {
       showToast('Error loading cities', 'error');
     }
   });
+  // Add in setupEventListeners function
+  document.getElementById('get-suggestions-btn')?.addEventListener('click', getSuggestions);
   
   // Navigation buttons
   document.getElementById('continue-to-search')?.addEventListener('click', () => {
@@ -1093,12 +1163,14 @@ declare global {
     toggleJobDescription: typeof toggleJobDescription;
     showAnalysisTab: typeof showAnalysisTab;
     updateSkillProgress: typeof updateSkillProgress;
+    searchWithSuggestion: typeof searchWithSuggestion;
     lucide: any;
   }
 }
 
 window.toggleSection = toggleSection;
 window.toggleJobDescription = toggleJobDescription;
+window.searchWithSuggestion = searchWithSuggestion;
 window.showAnalysisTab = showAnalysisTab;
 window.updateSkillProgress = updateSkillProgress;
 

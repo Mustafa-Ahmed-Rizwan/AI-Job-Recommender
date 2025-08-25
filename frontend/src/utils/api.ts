@@ -64,6 +64,13 @@ export const apiService = {
     const response = await api.get(`/cities/${country}`);
     return response.data;
   },
+  
+async getSuggestedJobs(resume_info: ResumeInfo): Promise<{ suggestions: string[]; message: string }> {
+  const response = await api.post('/suggest-jobs', {
+    resume_info,
+  });
+  return response.data;
+},
   // Get similar jobs
   async getSimilarJobs(resume_id: string, query_id: string, top_k: number = 10): Promise<{
     similar_jobs: Job[];

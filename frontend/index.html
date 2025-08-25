@@ -238,6 +238,36 @@
                             </button>
                         </div>
                     </div>
+                    <!-- Suggested Jobs -->
+                    <div id="suggested-jobs" class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                                    <i data-lucide="lightbulb" class="w-5 h-5 text-blue-600"></i>
+                                    <span>AI Job Suggestions</span>
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-1">Based on your resume and skills</p>
+                            </div>
+                            <button id="get-suggestions-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                <span>Get Suggestions</span>
+                            </button>
+                        </div>
+                        
+                        <div id="suggestions-loading" class="hidden text-center py-8">
+                            <div class="w-6 h-6 loading-spinner mx-auto mb-2">
+                                <i data-lucide="loader" class="w-6 h-6 text-blue-600"></i>
+                            </div>
+                            <p class="text-sm text-gray-600">AI is analyzing your profile...</p>
+                        </div>
+                        
+                        <div id="suggestions-content" class="hidden">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="suggestions-grid">
+                                <!-- Suggestions will be populated here -->
+                            </div>
+                            <p class="text-xs text-gray-500 mt-3 text-center">Click any suggestion to search for those jobs</p>
+                        </div>
+                    </div>
 
                     <!-- Search Loading -->
                     <div id="search-loading" class="hidden bg-white rounded-xl shadow-soft p-8 text-center">

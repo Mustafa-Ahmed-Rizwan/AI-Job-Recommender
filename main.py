@@ -307,6 +307,23 @@ async def get_cities(country: str):
     cities = CITIES.get(country, [])
     return {"cities": cities, "country": country}
 
+@app.post("/suggest-jobs")
+async def suggest_jobs(request: dict):
+    """Generate job suggestions based on resume"""
+    if not skill_analyzer:
+        raise HTTPException(status_code=500, detail="Skill analyzer not initialized")
+    
+    resume_info = request.get('resume_info')
+    if not resume_info:
+        raise HTTPException(status_code=400, detail="Resume info required")
+    
+    try:
+        suggestions = skill_analyzer.suggest_job_keywords(resume_info)
+        return {"suggestions": suggestions, "message": "Job suggestions generated"}
+    except Exception as e:
+        logger.error(f"Error generating job suggestions: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating suggestions: {str(e)}")
+
 # Error handlers
 @app.exception_handler(404)
 async def not_found_handler(request, exc):

@@ -86,6 +86,47 @@ Return only valid JSON without any markdown, explanations, or code blocks.
 
         
         return analyses
+    def suggest_job_keywords(self, resume_info: Dict[str, Any]) -> List[str]:
+        """Generate job keyword suggestions based on resume"""
+        
+        prompt = f"""
+    Based on this resume information, suggest 4 specific job titles/keywords that would be most relevant for job searching.
+
+    RESUME SKILLS: {', '.join(resume_info.get('extracted_skills', []))}
+    EXPERIENCE: {resume_info['sections'].get('experience', 'Not specified')[:500]}
+    EDUCATION: {resume_info['sections'].get('education', 'Not specified')[:300]}
+    PROJECTS: {resume_info['sections'].get('projects', 'Not specified')[:400]}
+
+    Return ONLY a JSON array of 4 job titles/keywords, nothing else:
+    ["Job Title 1", "Job Title 2", "Job Title 3", "Job Title 4"]
+    """
+        
+        try:
+            response = ask_with_fallback(prompt, max_tokens=200, temperature=0.3)
+            # Clean and parse response
+            response_str = str(response).strip()
+            if response_str.startswith("content='"):
+                start = response_str.find("content='") + len("content='")
+                content = ""
+                i = start
+                while i < len(response_str) and response_str[i] != "'":
+                    content += response_str[i]
+                    i += 1
+                response_str = content
+            
+            import json
+            suggestions = json.loads(response_str)
+            return suggestions if isinstance(suggestions, list) else []
+        except Exception as e:
+            print(f"Error in suggest_job_keywords: {e}")
+            # Fallback suggestions based on skills
+            skills = resume_info.get('extracted_skills', [])
+            if any('python' in skill.lower() for skill in skills):
+                return ["Python Developer", "Software Engineer", "Data Analyst", "Backend Developer"]
+            elif any('java' in skill.lower() for skill in skills):
+                return ["Java Developer", "Software Engineer", "Full Stack Developer", "Backend Developer"]
+            else:
+                return ["Software Developer", "IT Specialist", "Technical Analyst", "Software Engineer"]
     
     def _analyze_single_job_match(self, resume_info: Dict[str, Any], job: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze resume against a single job posting"""
