@@ -1,0 +1,152 @@
+/* frontend/src/styles.css   */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply text-gray-900;
+  }
+}
+
+@layer components {
+  .step-indicator.active .step-circle {
+    @apply bg-primary-600 text-white;
+  }
+  
+  .step-indicator.active .step-text {
+    @apply text-primary-600 font-medium;
+  }
+  
+  .step-indicator.completed .step-circle {
+    @apply bg-green-600 text-white;
+  }
+  
+  .step-indicator.completed .step-text {
+    @apply text-green-600;
+  }
+  
+  .skill-tag {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800;
+  }
+  
+  .job-card {
+    @apply bg-white rounded-lg shadow-soft border border-gray-200 p-6 transition-all duration-200 hover:shadow-medium hover:border-gray-300;
+  }
+  
+  .match-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .match-excellent {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .match-good {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .match-potential {
+    @apply bg-blue-100 text-blue-800;
+  }
+  
+  .loading-spinner {
+    animation: spin 1s linear infinite;
+  }
+  
+  .progress-bar {
+    transition: width 0.3s ease-in-out;
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  .toast {
+    @apply fixed top-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 transform transition-all duration-300 z-50;
+  }
+  
+  .toast.success {
+    @apply border-green-200 bg-green-50;
+  }
+  
+  .toast.error {
+    @apply border-red-200 bg-red-50;
+  }
+  
+  .toast.warning {
+    @apply border-yellow-200 bg-yellow-50;
+  }
+  
+  .tab-content {
+    @apply animate-fade-in;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+}
