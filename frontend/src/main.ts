@@ -9,7 +9,11 @@ import {
   downloadJSON,
   downloadCSV,
   generateCSVReport,
+  createReadableJobDescription,  // NEW
+  smartTruncate,                // NEW
+  formatJobDescription ,         // NEW
   truncateText
+
 } from './utils/helpers';
 import type { ResumeInfo, Job, JobAnalysis, OverallReport, TabType } from './types';
 
@@ -326,55 +330,73 @@ const displayJobs = (jobs: Job[]) => {
   });
   
   // Generate job cards
-  jobsContainer.innerHTML = sortedJobs.slice(0, 10).map(job => {
+  jobsContainer.innerHTML = sortedJobs.slice(0, 10).map((job, index) => {
     const similarityScore = parseFloat(String(job.similarity_score || 0));
     const matchClass = similarityScore > 0.8 ? 'match-excellent' : 
                       similarityScore > 0.6 ? 'match-good' : 'match-potential';
     const matchLabel = getMatchLabel(similarityScore);
     
+    // Format the job description
+    const formattedDescription = job.description ? createReadableJobDescription(job.description) : '';
+    const previewDescription = job.description ? smartTruncate(job.description, 180) : '';
+    
     return `
       <div class="job-card">
-        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div class="flex-1">
-            <div class="flex items-start justify-between mb-2">
-              <h3 class="text-lg font-semibold text-gray-900">${job.title || 'Unknown Title'}</h3>
+        <div class="flex flex-col gap-4">
+          <!-- Job Header -->
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">${job.title || 'Unknown Title'}</h3>
+              
+              <div class="flex items-center space-x-4 text-sm text-gray-600">
+                <div class="flex items-center space-x-1">
+                  <i data-lucide="building" class="w-4 h-4"></i>
+                  <span>${job.company_name || job.company || 'Unknown Company'}</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                  <i data-lucide="map-pin" class="w-4 h-4"></i>
+                  <span>${job.location || 'Unknown Location'}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+              <div class="text-center">
+                <div class="text-2xl font-bold ${similarityScore > 0.8 ? 'text-green-600' : similarityScore > 0.6 ? 'text-yellow-600' : 'text-blue-600'}">
+                  ${(similarityScore * 100).toFixed(0)}%
+                </div>
+                <div class="text-xs text-gray-500">Match</div>
+              </div>
               <span class="match-badge ${matchClass}">${(similarityScore * 100).toFixed(0)}% match</span>
             </div>
-            
-            <div class="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-              <div class="flex items-center space-x-1">
-                <i data-lucide="building" class="w-4 h-4"></i>
-                <span>${job.company_name || job.company || 'Unknown Company'}</span>
-              </div>
-              <div class="flex items-center space-x-1">
-                <i data-lucide="map-pin" class="w-4 h-4"></i>
-                <span>${job.location || 'Unknown Location'}</span>
-              </div>
-            </div>
-            
-            ${job.description ? `
-              <div class="mb-4">
-                <div class="text-sm text-gray-700 line-clamp-3">
-                  ${truncateText(job.description, 200)}
-                </div>
-                <button onclick="toggleJobDescription(this)" class="text-primary-600 text-sm mt-1 hover:text-primary-700">
-                  Read more
-                </button>
-                <div class="hidden mt-2 text-sm text-gray-700">
-                  ${job.description}
-                </div>
-              </div>
-            ` : ''}
           </div>
           
-          <div class="flex items-center space-x-3">
-            <div class="text-center">
-              <div class="text-2xl font-bold ${similarityScore > 0.8 ? 'text-green-600' : similarityScore > 0.6 ? 'text-yellow-600' : 'text-blue-600'}">
-                ${(similarityScore * 100).toFixed(0)}%
+          <!-- Job Description -->
+          ${job.description ? `
+            <div class="job-description-container">
+              <div class="job-description-preview" id="job-preview-${index}">
+                ${previewDescription}
               </div>
-              <div class="text-xs text-gray-500">Match</div>
+              
+              <div class="job-description-full job-description hidden" id="job-full-${index}">
+                <div class="job-description">
+                  ${formattedDescription}
+                </div>            
+              </div>
+              <button onclick="toggleJobDescription(${index})" 
+                      class="job-description-toggle" 
+                      id="job-toggle-${index}">
+                Read more
+              </button>
             </div>
-            
+          ` : `
+            <div class="text-sm text-gray-500 italic">
+              No job description available
+            </div>
+          `}
+          
+          <!-- Apply Button -->
+          <div class="flex justify-end pt-2 border-t border-gray-100">
             ${job.apply_link && job.apply_link.startsWith('http') ? `
               <a href="${job.apply_link}" target="_blank" rel="noopener noreferrer" 
                  class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center space-x-2">
@@ -383,7 +405,7 @@ const displayJobs = (jobs: Job[]) => {
               </a>
             ` : `
               <div class="px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm">
-                No link available
+                No application link available
               </div>
             `}
           </div>
@@ -937,12 +959,25 @@ const toggleSection = (sectionName: string) => {
   }
 };
 
-const toggleJobDescription = (button: HTMLButtonElement) => {
-  const fullDescription = button.nextElementSibling as HTMLElement;
+const toggleJobDescription = (jobIndex: number) => {
+  const previewElement = document.getElementById(`job-preview-${jobIndex}`);
+  const fullElement = document.getElementById(`job-full-${jobIndex}`);
+  const toggleButton = document.getElementById(`job-toggle-${jobIndex}`);
   
-  if (fullDescription) {
-    fullDescription.classList.toggle('hidden');
-    button.textContent = fullDescription.classList.contains('hidden') ? 'Read more' : 'Read less';
+  if (!previewElement || !fullElement || !toggleButton) return;
+  
+  const isExpanded = !fullElement.classList.contains('hidden');
+  
+  if (isExpanded) {
+    // Collapse - show preview, hide full description
+    previewElement.classList.remove('hidden');
+    fullElement.classList.add('hidden');
+    toggleButton.textContent = 'Read more';
+  } else {
+    // Expand - hide preview, show full description
+    previewElement.classList.add('hidden');
+    fullElement.classList.remove('hidden');
+    toggleButton.textContent = 'Read less';
   }
 };
 
