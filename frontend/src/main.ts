@@ -125,6 +125,9 @@ const showTab = (tabName: TabType) => {
 const showAuthForms = () => {
   document.getElementById('auth-section')?.classList.remove('hidden');
   document.getElementById('main-app')?.classList.add('hidden');
+  
+  // Always show sign-in form by default and clear inputs
+  showSignInForm();
 };
 
 const showMainApp = () => {
@@ -138,15 +141,75 @@ const showMainApp = () => {
     userInfo.textContent = `Welcome, ${user.email}`;
   }
 };
+// Add this helper function to completely clear all form inputs
+const clearAllAuthForms = () => {
+  // Clear sign-in form
+  const signinEmail = document.getElementById('signin-email') as HTMLInputElement;
+  const signinPassword = document.getElementById('signin-password') as HTMLInputElement;
+  
+  if (signinEmail) signinEmail.value = '';
+  if (signinPassword) signinPassword.value = '';
+  
+  // Clear sign-up form
+  const signupEmail = document.getElementById('signup-email') as HTMLInputElement;
+  const signupPassword = document.getElementById('signup-password') as HTMLInputElement;
+  const signupName = document.getElementById('signup-name') as HTMLInputElement;
+  
+  if (signupEmail) signupEmail.value = '';
+  if (signupPassword) signupPassword.value = '';
+  if (signupName) signupName.value = '';
+};
 
 const showSignUpForm = () => {
-  document.getElementById('signin-form')?.classList.add('hidden');
-  document.getElementById('signup-form')?.classList.remove('hidden');
+  const signinForm = document.getElementById('signin-form');
+  const signupForm = document.getElementById('signup-form');
+  
+  if (signinForm) {
+    signinForm.classList.add('hidden');
+    signinForm.style.display = 'none';
+  }
+  
+  if (signupForm) {
+    signupForm.classList.remove('hidden');
+    signupForm.style.display = 'block';
+  }
+  
+  // Clear ALL form inputs when switching
+  clearAllAuthForms();
+  
+  // Focus on email input after clearing
+  setTimeout(() => {
+    const emailInput = document.getElementById('signup-email') as HTMLInputElement;
+    if (emailInput) {
+      emailInput.focus();
+    }
+  }, 100);
 };
 
 const showSignInForm = () => {
-  document.getElementById('signup-form')?.classList.add('hidden');
-  document.getElementById('signin-form')?.classList.remove('hidden');
+  const signupForm = document.getElementById('signup-form');
+  const signinForm = document.getElementById('signin-form');
+  
+  if (signupForm) {
+    signupForm.classList.add('hidden');
+    signupForm.style.display = 'none';
+  }
+  
+  if (signinForm) {
+    signinForm.classList.remove('hidden');
+    signinForm.style.display = 'block';
+  }
+  
+  // Clear ALL form inputs when switching
+  clearAllAuthForms();
+  
+  // Focus on email input after clearing
+  setTimeout(() => {
+    const emailInput = document.getElementById('signin-email') as HTMLInputElement;
+    if (emailInput) {
+      emailInput.focus();
+    }
+  }, 100);
 };
 
 const handleSignIn = async (e: Event) => {
@@ -195,8 +258,11 @@ const handleSignUp = async (e: Event) => {
     const result = await authService.signUp(email, password, displayName);
     
     if (result.success) {
-      showToast('Account created successfully!');
-      showMainApp();
+      showToast('Account created successfully! Please sign in to continue.');
+      // Automatically switch to sign-in form after successful sign-up
+      setTimeout(() => {
+      showSignInForm();
+    }, 100);
     } else {
       showToast(result.message, 'error');
     }
@@ -207,12 +273,12 @@ const handleSignUp = async (e: Event) => {
     signupForm?.classList.remove('hidden');
   }
 };
-
 const handleLogout = async () => {
   try {
     const result = await authService.logout();
     if (result.success) {
       showToast('Signed out successfully!');
+      clearAllAuthForms();
       showAuthForms();
       resetApplication();
     } else {
@@ -1155,15 +1221,17 @@ const printReport = () => {
 
 // Initialize Application
 const initializeApp = () => {
-  // Check authentication state
-  authService.onAuthStateChange((user) => {
-    if (user) {
+  // Check authentication state with updated callback
+  authService.onAuthStateChange((user, isNewSignUp) => {
+    if (user && !isNewSignUp) {
+      // Only show main app if user is signed in (not just signed up)
       console.log('User signed in:', user.email);
       showMainApp();
-    } else {
+    } else if (!user) {
       console.log('User signed out');
       showAuthForms();
     }
+    // If isNewSignUp is true, we stay on the auth forms (sign-in form)
   });
   
   // Check API status
