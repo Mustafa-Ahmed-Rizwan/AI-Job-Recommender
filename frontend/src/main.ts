@@ -16,6 +16,8 @@ import {
 
 } from './utils/helpers';
 import type { ResumeInfo, Job, JobAnalysis, OverallReport, TabType } from './types';
+import { authService } from './services/authService';
+import { resumeService } from './services/resumeService';
 
 // Global application state
 class AppState {
@@ -45,6 +47,7 @@ class AppState {
 const appState = new AppState();
 
 // Utility functions
+
 const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
   const toast = document.createElement('div');
   toast.className = `toast ${type} slide-up`;
@@ -118,6 +121,107 @@ const showTab = (tabName: TabType) => {
   appState.currentTab = tabName;
   updateStepIndicator(tabName);
 };
+// Add these authentication functions
+const showAuthForms = () => {
+  document.getElementById('auth-section')?.classList.remove('hidden');
+  document.getElementById('main-app')?.classList.add('hidden');
+};
+
+const showMainApp = () => {
+  document.getElementById('auth-section')?.classList.add('hidden');
+  document.getElementById('main-app')?.classList.remove('hidden');
+  
+  // Update user info display
+  const user = authService.getCurrentUser();
+  const userInfo = document.getElementById('user-info');
+  if (user && userInfo) {
+    userInfo.textContent = `Welcome, ${user.email}`;
+  }
+};
+
+const showSignUpForm = () => {
+  document.getElementById('signin-form')?.classList.add('hidden');
+  document.getElementById('signup-form')?.classList.remove('hidden');
+};
+
+const showSignInForm = () => {
+  document.getElementById('signup-form')?.classList.add('hidden');
+  document.getElementById('signin-form')?.classList.remove('hidden');
+};
+
+const handleSignIn = async (e: Event) => {
+  e.preventDefault();
+  
+  const email = (document.getElementById('signin-email') as HTMLInputElement).value;
+  const password = (document.getElementById('signin-password') as HTMLInputElement).value;
+  
+  const authLoading = document.getElementById('auth-loading');
+  const signinForm = document.getElementById('signin-form');
+  
+  try {
+    authLoading?.classList.remove('hidden');
+    signinForm?.classList.add('hidden');
+    
+    const result = await authService.signIn(email, password);
+    
+    if (result.success) {
+      showToast('Signed in successfully!');
+      showMainApp();
+    } else {
+      showToast(result.message, 'error');
+    }
+  } catch (error) {
+    showToast('Sign in failed. Please try again.', 'error');
+  } finally {
+    authLoading?.classList.add('hidden');
+    signinForm?.classList.remove('hidden');
+  }
+};
+
+const handleSignUp = async (e: Event) => {
+  e.preventDefault();
+  
+  const email = (document.getElementById('signup-email') as HTMLInputElement).value;
+  const password = (document.getElementById('signup-password') as HTMLInputElement).value;
+  const displayName = (document.getElementById('signup-name') as HTMLInputElement).value;
+  
+  const authLoading = document.getElementById('auth-loading');
+  const signupForm = document.getElementById('signup-form');
+  
+  try {
+    authLoading?.classList.remove('hidden');
+    signupForm?.classList.add('hidden');
+    
+    const result = await authService.signUp(email, password, displayName);
+    
+    if (result.success) {
+      showToast('Account created successfully!');
+      showMainApp();
+    } else {
+      showToast(result.message, 'error');
+    }
+  } catch (error) {
+    showToast('Sign up failed. Please try again.', 'error');
+  } finally {
+    authLoading?.classList.add('hidden');
+    signupForm?.classList.remove('hidden');
+  }
+};
+
+const handleLogout = async () => {
+  try {
+    const result = await authService.logout();
+    if (result.success) {
+      showToast('Signed out successfully!');
+      showAuthForms();
+      resetApplication();
+    } else {
+      showToast(result.message, 'error');
+    }
+  } catch (error) {
+    showToast('Logout failed. Please try again.', 'error');
+  }
+};
 
 // API Status Check
 const checkAPIStatus = async () => {
@@ -186,6 +290,11 @@ const uploadResume = async (file: File) => {
     
     // Upload file
     const result = await apiService.uploadResume(file);
+    // Save to Firebase
+    const saveResult = await resumeService.saveResume(result.resume_info, file.name);
+    if (!saveResult.success) {
+      console.warn('Failed to save to Firebase:', saveResult.message);
+    }
     
     // Complete progress
     clearInterval(progressInterval);
@@ -1046,6 +1155,17 @@ const printReport = () => {
 
 // Initialize Application
 const initializeApp = () => {
+  // Check authentication state
+  authService.onAuthStateChange((user) => {
+    if (user) {
+      console.log('User signed in:', user.email);
+      showMainApp();
+    } else {
+      console.log('User signed out');
+      showAuthForms();
+    }
+  });
+  
   // Check API status
   checkAPIStatus();
   
@@ -1062,6 +1182,10 @@ const initializeApp = () => {
 };
 
 const setupEventListeners = () => {
+   // Auth form listeners
+  document.getElementById('signin-form-element')?.addEventListener('submit', handleSignIn);
+  document.getElementById('signup-form-element')?.addEventListener('submit', handleSignUp);
+  document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
   // File upload
   const uploadArea = document.getElementById('upload-area');
   const resumeInput = document.getElementById('resume-input') as HTMLInputElement;
@@ -1199,6 +1323,9 @@ declare global {
     showAnalysisTab: typeof showAnalysisTab;
     updateSkillProgress: typeof updateSkillProgress;
     searchWithSuggestion: typeof searchWithSuggestion;
+    showSignUpForm:typeof showSignUpForm;
+    showSignInForm:typeof showSignInForm;
+
     lucide: any;
   }
 }
@@ -1208,6 +1335,8 @@ window.toggleJobDescription = toggleJobDescription;
 window.searchWithSuggestion = searchWithSuggestion;
 window.showAnalysisTab = showAnalysisTab;
 window.updateSkillProgress = updateSkillProgress;
+window.showSignUpForm = showSignUpForm;
+window.showSignInForm = showSignInForm;
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);

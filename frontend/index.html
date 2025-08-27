@@ -37,54 +37,154 @@
     <div id="app">
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                            <i data-lucide="target" class="w-5 h-5 text-white"></i>
-                        </div>
-                        <h1 class="text-xl font-semibold text-gray-900">AI Job Recommender</h1>
-                    </div>
-                    
-                    <div class="flex items-center space-x-4">
-                        <div id="api-status" class="flex items-center space-x-2">
-                            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-                            <span class="text-sm text-gray-600">Checking API...</span>
-                        </div>
-                        <button id="reset-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
-                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                        </button>
-                    </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                <i data-lucide="target" class="w-5 h-5 text-white"></i>
                 </div>
+                <h1 class="text-xl font-semibold text-gray-900">AI Job Recommender</h1>
             </div>
-        </header>
+            
+            <div class="flex items-center space-x-4">
+                <div id="api-status" class="flex items-center space-x-2">
+                <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span class="text-sm text-gray-600">Checking API...</span>
+                </div>
+                
+                <!-- Authentication Buttons -->
+                <div id="auth-buttons" class="flex items-center space-x-2">
+                <button onclick="window.authModal.show('login')" class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors">
+                    Sign In
+                </button>
+                <button onclick="window.authModal.show('register')" class="px-3 py-1 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">
+                    Sign Up
+                </button>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                <div id="user-info" class="text-sm text-gray-600"></div>
+                <button id="logout-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+                <button id="reset-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+                </div>
+
+            </div>
+            </div>
+        </div>
+</header>
+        <!-- Authentication Section -->
+        <div id="auth-section" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+            <div class="text-center mb-8">
+            <div class="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="user" class="w-6 h-6 text-white"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900">Welcome to AI Job Recommender</h2>
+            <p class="text-gray-600 mt-2">Sign in to get personalized job recommendations</p>
+            </div>
+
+            <!-- Sign In Form -->
+            <div id="signin-form">
+            <form id="signin-form-element" class="space-y-4">
+                <div>
+                <label for="signin-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input type="email" id="signin-email" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="your@email.com">
+                </div>
+                <div>
+                <label for="signin-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input type="password" id="signin-password" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="Your password">
+                </div>
+                <button type="submit" 
+                        class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                Sign In
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                Don't have an account? 
+                <button onclick="showSignUpForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign up</button>
+                </p>
+            </div>
+            </div>
+
+            <!-- Sign Up Form -->
+            <div id="signup-form" class="hidden">
+            <form id="signup-form-element" class="space-y-4">
+                <div>
+                <label for="signup-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input type="email" id="signup-email" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="your@email.com">
+                </div>
+                <div>
+                <label for="signup-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input type="password" id="signup-password" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="At least 6 characters">
+                </div>
+                <div>
+                <label for="signup-name" class="block text-sm font-medium text-gray-700 mb-2">Full Name (Optional)</label>
+                <input type="text" id="signup-name"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="Your full name">
+                </div>
+                <button type="submit" 
+                        class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                Create Account
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                Already have an account? 
+                <button onclick="showSignInForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign in</button>
+                </p>
+            </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="auth-loading" class="hidden text-center">
+            <div class="w-6 h-6 loading-spinner mx-auto mb-2">
+                <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+            </div>
+            <p class="text-sm text-gray-600">Please wait...</p>
+            </div>
+        </div>
+        </div>
+
+        <!-- Main App Container -->
+        <div id="main-app" class="hidden">
 
         <!-- Progress Indicator -->
         <div class="bg-white border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center space-x-8 py-4">
-                    <div id="step-upload" class="flex items-center space-x-2 step-indicator active">
-                        <div class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-medium">1</div>
-                        <span class="text-sm font-medium text-primary-600">Upload Resume</span>
-                    </div>
-                    <div class="w-8 h-0.5 bg-gray-200"></div>
-                    <div id="step-search" class="flex items-center space-x-2 step-indicator">
-                        <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">2</div>
-                        <span class="text-sm text-gray-500">Find Jobs</span>
-                    </div>
-                    <div class="w-8 h-0.5 bg-gray-200"></div>
-                    <div id="step-analysis" class="flex items-center space-x-2 step-indicator">
-                        <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">3</div>
-                        <span class="text-sm text-gray-500">Analysis</span>
-                    </div>
-                    <div class="w-8 h-0.5 bg-gray-200"></div>
-                    <div id="step-report" class="flex items-center space-x-2 step-indicator">
-                        <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">4</div>
-                        <span class="text-sm text-gray-500">Report</span>
-                    </div>
-                </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center space-x-8 py-4">
+            <div id="step-search" class="flex items-center space-x-2 step-indicator active">
+                <div class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-medium">1</div>
+                <span class="text-sm font-medium text-primary-600">Find Jobs</span>
+            </div>
+            <div class="w-8 h-0.5 bg-gray-200"></div>
+            <div id="step-analysis" class="flex items-center space-x-2 step-indicator">
+                <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">2</div>
+                <span class="text-sm text-gray-500">Analysis</span>
+            </div>
+            <div class="w-8 h-0.5 bg-gray-200"></div>
+            <div id="step-report" class="flex items-center space-x-2 step-indicator">
+                <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">3</div>
+                <span class="text-sm text-gray-500">Report</span>
+            </div>
             </div>
         </div>
+</div>
 
         <!-- Main Content -->
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -433,5 +533,10 @@
     </div>
 
     <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/components/authModal.js"></script>
+    <script type="module" src="/src/components/profileSetup.js"></script>
+    <script type="module" src="/src/main.ts"></script>
+    </div>
+
 </body>
 </html>
