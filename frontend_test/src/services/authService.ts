@@ -1,4 +1,3 @@
-// frontend/src/services/authService.ts
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -7,37 +6,18 @@ import {
   onAuthStateChanged
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../config/firebase.js';
-try {
-  // This will ensure Firebase is initialized
-  import('../config/firebase.js');
-} catch (error) {
-  console.error('Firebase initialization error:', error);
-}
-
-export interface UserProfile {
-  uid: string;
-  email: string;
-  displayName?: string;
-  createdAt: string;
-  lastLogin: string;
-}
+import { auth, db } from '../config/firebase';
+import { UserProfile } from '../types';
 
 class AuthService {
   private currentUser: User | null = null;
-  private authStateCallbacks: Array<(user: User | null, isNewSignUp?: boolean) => void> = [];
-  private isSignUpFlow: boolean = false; // Track if we're in sign-up flow
+  private authStateCallbacks: Array<(user: User | null) => void> = [];
 
   constructor() {
     // Listen to auth state changes
     onAuthStateChanged(auth, (user) => {
       this.currentUser = user;
-      // Pass the sign-up flag to callbacks
-      this.authStateCallbacks.forEach(callback => callback(user, this.isSignUpFlow));
-      // Reset the sign-up flag after notifying callbacks
-      if (this.isSignUpFlow) {
-        this.isSignUpFlow = false;
-      }
+      this.authStateCallbacks.forEach(callback => callback(user));
     });
   }
 
@@ -65,7 +45,6 @@ class AuthService {
   // Sign in with email and password
   async signIn(email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> {
     try {
-      this.isSignUpFlow = false; // Explicitly set to false for sign-in
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
@@ -88,7 +67,6 @@ class AuthService {
   // Sign up with email and password
   async signUp(email: string, password: string, displayName?: string): Promise<{ success: boolean; message: string; user?: User }> {
     try {
-      this.isSignUpFlow = true; // Set flag before creating user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
@@ -103,16 +81,12 @@ class AuthService {
       
       await setDoc(doc(db, 'users', user.uid), userProfile);
       
-      // Sign out the user immediately after sign-up
-      await signOut(auth);
-      
       return {
         success: true,
-        message: 'Account created successfully. Please sign in to continue.',
+        message: 'Account created successfully',
         user
       };
     } catch (error: any) {
-      this.isSignUpFlow = false; // Reset flag on error
       return {
         success: false,
         message: this.getAuthErrorMessage(error.code)
@@ -123,7 +97,6 @@ class AuthService {
   // Sign out
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      this.isSignUpFlow = false; // Reset flag on logout
       await signOut(auth);
       return {
         success: true,
@@ -166,7 +139,7 @@ class AuthService {
   }
 
   // Add auth state change listener
-  onAuthStateChange(callback: (user: User | null, isNewSignUp?: boolean) => void): () => void {
+  onAuthStateChange(callback: (user: User | null) => void): () => void {
     this.authStateCallbacks.push(callback);
     
     // Return unsubscribe function

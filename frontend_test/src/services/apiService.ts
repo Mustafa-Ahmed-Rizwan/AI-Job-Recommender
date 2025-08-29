@@ -1,8 +1,9 @@
 import axios from 'axios';
-import type { ResumeInfo, Job, JobAnalysis, OverallReport } from '../types';
-import { authService } from '../services/authService';
+import Constants from 'expo-constants';
+import { ResumeInfo, Job, JobAnalysis, OverallReport } from '../types';
+import { authService } from './authService';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = Constants.expoConfig?.extra?.apiBaseUrl || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -43,7 +44,6 @@ export const apiService = {
     }
     return config;
   },
-  
 
   // Health check (no auth required)
   async checkHealth(): Promise<boolean> {
@@ -56,20 +56,30 @@ export const apiService = {
   },
 
   // Upload resume (requires auth)
-  async uploadResume(file: File): Promise<{ resume_id: string; resume_info: ResumeInfo }> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const config = await this.addAuthHeader({
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-
-    const response = await api.post('/upload-resume', formData, config);
-    return response.data;
-  },
-
+  // apiService.ts - Updated uploadResume method
+async uploadResume(fileUri: string, fileName: string, mimeType: string): Promise<{ resume_id: string; resume_info: ResumeInfo }> {
+  // Create proper FormData
+  const formData = new FormData();
+  
+  // Get the file blob from the URI
+  const fileResponse = await fetch(fileUri); // ✅ Changed variable name
+  const blob = await fileResponse.blob();    // ✅ Changed variable name
+  
+  // Append the file with proper formatting
+  formData.append('file', blob, fileName);
+  
+  const config = await this.addAuthHeader({
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  console.log('FormData entries:');
+for (let [key, value] of formData.entries()) {
+  console.log(key, value);
+}
+  const apiResponse = await api.post('/upload-resume', formData, config); // ✅ Changed variable name
+  return apiResponse.data;
+},
   // Search jobs (requires auth)
   async searchJobs(job_query: string, location: string = 'Pakistan', num_jobs: number = 20): Promise<{
     jobs: Job[];
@@ -93,7 +103,7 @@ export const apiService = {
     return response.data;
   },
   
-  // Get job suggestions (no auth required for now, but can be changed)
+  // Get job suggestions (requires auth)
   async getSuggestedJobs(resume_info: ResumeInfo): Promise<{ suggestions: string[]; message: string }> {
     const config = await this.addAuthHeader();
     
@@ -137,7 +147,7 @@ export const apiService = {
     return response.data;
   },
 
-  // Generate report (no auth required for now, but data should be from authenticated session)
+  // Generate report (requires auth)
   async generateReport(analyses: JobAnalysis[]): Promise<{
     report: OverallReport;
     message: string;
@@ -148,54 +158,6 @@ export const apiService = {
       analyses,
     }, config);
 
-    return response.data;
-  },
-
-  // Get user profile (requires auth)
-  async getUserProfile(): Promise<{
-    success: boolean;
-    profile?: any;
-    message?: string;
-  }> {
-    const config = await this.addAuthHeader();
-    
-    const response = await api.get('/user/profile', config);
-    return response.data;
-  },
-
-  // Update user profile (requires auth)
-  async updateUserProfile(profileData: any): Promise<{
-    success: boolean;
-    message: string;
-  }> {
-    const config = await this.addAuthHeader();
-    
-    const response = await api.post('/user/profile', profileData, config);
-    return response.data;
-  },
-
-  // Session management endpoints (for compatibility, but not needed with Firebase)
-  async getSessionData(user_id: string): Promise<any> {
-    const config = await this.addAuthHeader();
-    const response = await api.get(`/session/${user_id}`, config);
-    return response.data;
-  },
-
-  async clearSession(user_id: string): Promise<any> {
-    const config = await this.addAuthHeader();
-    const response = await api.delete(`/session/${user_id}`, config);
-    return response.data;
-  },
-
-  // Background analysis (requires auth)
-  async analyzeSkillsAsync(resume_id: string, jobs: Job[] = []): Promise<{
-    task_id: string;
-    message: string;
-    status: string;
-  }> {
-    const config = await this.addAuthHeader();
-    
-    const response = await api.post(`/analyze-skills-async/${resume_id}`, jobs, config);
     return response.data;
   },
 };

@@ -1,4 +1,4 @@
-// frontend/src/types/index.ts
+// Same types as your web app
 export interface ResumeInfo {
   raw_text: string;
   email?: string;
@@ -81,4 +81,36 @@ export interface APIResponse<T = any> {
   data?: T;
 }
 
-export type TabType = 'upload' | 'search' | 'analysis' | 'report';
+// Navigation types
+export type RootStackParamList = {
+  Auth: undefined;
+  Main: undefined;
+};
+
+export type MainTabParamList = {
+  Upload: undefined;
+  Search: undefined;
+  Analysis: undefined;
+  Report: undefined;
+  Profile: undefined;
+};
+
+// App State
+export interface AppState {
+  resumeProcessed: boolean;
+  resumeInfo: ResumeInfo | null;
+  resumeId: string | null;
+  jobsFetched: boolean;
+  jobsData: Job[];
+  queryId: string | null;
+  jobAnalyses: JobAnalysis[];
+  overallReport: OverallReport | null;
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName?: string;
+  createdAt: string;
+  lastLogin: string;
+}
