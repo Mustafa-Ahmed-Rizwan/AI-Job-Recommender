@@ -13,8 +13,10 @@ import {
   Avatar,
   Divider,
   List,
+  ActivityIndicator,
 } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, typography, spacing, borderRadius } from '../config/theme';
 import { authService } from '../services/authService';
 import { UserProfile } from '../types';
@@ -27,9 +29,17 @@ export default function ProfileScreen() {
     displayName: '',
     email: '',
   });
+  // Add state for app statistics
+  const [appStats, setAppStats] = useState({
+    resumesUploaded: 0,
+    jobsAnalyzed: 0,
+    reportsGenerated: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     loadUserProfile();
+    loadAppStatistics();
   }, []);
 
   const loadUserProfile = async () => {
@@ -43,6 +53,41 @@ export default function ProfileScreen() {
           email: profile.email,
         });
       }
+    }
+  };
+
+  const loadAppStatistics = async () => {
+    try {
+      setStatsLoading(true);
+      
+      // Check if resume is uploaded
+      const resumeId = await AsyncStorage.getItem('resume_id');
+      const resumesUploaded = resumeId ? 1 : 0;
+      
+      // Check jobs analyzed (from stored job analyses or jobs data)
+      const jobsData = await AsyncStorage.getItem('jobs_data');
+      let jobsAnalyzed = 0;
+      if (jobsData) {
+        try {
+          const parsedJobs = JSON.parse(jobsData);
+          jobsAnalyzed = Array.isArray(parsedJobs) ? parsedJobs.length : 0;
+        } catch (error) {
+          console.error('Error parsing jobs data:', error);
+        }
+      }
+      
+      // For now, reports generated is 0 (you can implement this based on your app logic)
+      const reportsGenerated = 0;
+      
+      setAppStats({
+        resumesUploaded,
+        jobsAnalyzed,
+        reportsGenerated,
+      });
+    } catch (error) {
+      console.error('Error loading app statistics:', error);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -92,6 +137,7 @@ export default function ProfileScreen() {
   if (!user) {
     return (
       <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary[600]} />
         <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
@@ -180,22 +226,27 @@ export default function ProfileScreen() {
 
       <Card style={styles.card}>
         <Card.Content>
-          <Text style={styles.sectionTitle}>App Statistics</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>App Statistics</Text>
+            {statsLoading && (
+              <ActivityIndicator size="small" color={colors.primary[600]} />
+            )}
+          </View>
           <List.Item
             title="Resumes Uploaded"
-            description="0"
+            description={statsLoading ? 'Loading...' : appStats.resumesUploaded.toString()}
             left={(props) => <List.Icon {...props} icon="file-upload" />}
           />
           <Divider />
           <List.Item
             title="Jobs Analyzed"
-            description="0"
+            description={statsLoading ? 'Loading...' : appStats.jobsAnalyzed.toString()}
             left={(props) => <List.Icon {...props} icon="analytics" />}
           />
           <Divider />
           <List.Item
             title="Reports Generated"
-            description="0"
+            description={statsLoading ? 'Loading...' : appStats.reportsGenerated.toString()}
             left={(props) => <List.Icon {...props} icon="assessment" />}
           />
         </Card.Content>
@@ -288,6 +339,7 @@ const styles = StyleSheet.create({
   loadingText: {
     ...typography.body,
     color: colors.gray[600],
+    marginTop: spacing.md,
   },
   profileCard: {
     marginBottom: spacing.md,
@@ -344,6 +396,12 @@ const styles = StyleSheet.create({
     ...typography.h4,
     marginBottom: spacing.md,
     color: colors.gray[900],
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
   },
   dangerCard: {
     marginBottom: spacing.xl,

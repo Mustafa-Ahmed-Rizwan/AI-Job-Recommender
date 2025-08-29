@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../config/theme';
 
 // Import screens
-import UploadScreen from '../screens/UploadScreen';
+// import UploadScreen from '../screens/UploadScreen';
 import SearchScreen from '../screens/SearchScreen';
 import AnalysisScreen from '../screens/AnalysisScreen';
 import ReportScreen from '../screens/ReportScreen';
@@ -66,11 +66,6 @@ export default function MainTabNavigator() {
         headerTintColor: '#ffffff',
       })}
     >
-      <Tab.Screen 
-        name="Upload" 
-        component={UploadScreen} 
-        options={{ title: 'Upload Resume' }}
-      />
       <Tab.Screen 
         name="Search" 
         component={SearchScreen} 

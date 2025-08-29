@@ -85,6 +85,7 @@ export interface APIResponse<T = any> {
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
+  ProfileSetup: undefined;
 };
 
 export type MainTabParamList = {
@@ -107,10 +108,21 @@ export interface AppState {
   overallReport: OverallReport | null;
 }
 
+// Updated UserProfile with resume management
 export interface UserProfile {
   uid: string;
   email: string;
   displayName?: string;
   createdAt: string;
   lastLogin: string;
+  profileCompleted: boolean;  // New field
+  resumeId: string | null;    // New field
+  resumeInfo: ResumeInfo | null; // New field
+  lastUpdated?: string;       // New field
+}
+
+// Profile setup flow state
+export interface ProfileSetupState {
+  step: 'welcome' | 'upload' | 'complete';
+  resumeUploaded: boolean;
 }

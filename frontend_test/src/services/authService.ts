@@ -5,7 +5,8 @@ import {
   User,
   onAuthStateChanged
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth, db } from '../config/firebase';
 import { UserProfile } from '../types';
 
@@ -18,7 +19,53 @@ class AuthService {
     onAuthStateChanged(auth, (user) => {
       this.currentUser = user;
       this.authStateCallbacks.forEach(callback => callback(user));
+      
+      // Load user data when authenticated
+      if (user) {
+        this.loadUserData(user.uid);
+      } else {
+        // Clear local data when signed out
+        this.clearLocalData();
+      }
     });
+  }
+
+  // Load user data from backend and store locally
+  private async loadUserData(uid: string): Promise<void> {
+    try {
+      const userProfile = await this.getUserProfile(uid);
+      if (userProfile) {
+        // Store user profile locally
+        await AsyncStorage.setItem('user_profile', JSON.stringify(userProfile));
+        
+        // Load resume data if available
+        if (userProfile.resumeId) {
+          await AsyncStorage.setItem('resume_id', userProfile.resumeId);
+          
+          // Load resume info from backend if available
+          if (userProfile.resumeInfo) {
+            await AsyncStorage.setItem('resume_info', JSON.stringify(userProfile.resumeInfo));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  }
+
+  // Clear local data
+  private async clearLocalData(): Promise<void> {
+    try {
+      await AsyncStorage.multiRemove([
+        'user_profile',
+        'resume_id', 
+        'resume_info',
+        'jobs_data',
+        'query_id'
+      ]);
+    } catch (error) {
+      console.error('Error clearing local data:', error);
+    }
   }
 
   // Get current user
@@ -29,6 +76,16 @@ class AuthService {
   // Check if user is authenticated
   isAuthenticated(): boolean {
     return this.currentUser !== null;
+  }
+
+  // Check if user has completed profile (uploaded resume)
+  async hasCompletedProfile(): Promise<boolean> {
+    try {
+      const resumeId = await AsyncStorage.getItem('resume_id');
+      return resumeId !== null;
+    } catch {
+      return false;
+    }
   }
 
   // Get ID token for API requests
@@ -76,7 +133,10 @@ class AuthService {
         email: user.email!,
         displayName: displayName || '',
         createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
+        lastLogin: new Date().toISOString(),
+        profileCompleted: false,
+        resumeId: null,
+        resumeInfo: null
       };
       
       await setDoc(doc(db, 'users', user.uid), userProfile);
@@ -130,10 +190,64 @@ class AuthService {
   async updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<boolean> {
     try {
       const docRef = doc(db, 'users', uid);
-      await setDoc(docRef, updates, { merge: true });
+      await updateDoc(docRef, updates);
+      
+      // Update local storage
+      const currentProfile = await AsyncStorage.getItem('user_profile');
+      if (currentProfile) {
+        const updatedProfile = { ...JSON.parse(currentProfile), ...updates };
+        await AsyncStorage.setItem('user_profile', JSON.stringify(updatedProfile));
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating user profile:', error);
+      return false;
+    }
+  }
+
+  // Update resume information in user profile
+  async updateResumeInfo(uid: string, resumeId: string, resumeInfo: any): Promise<boolean> {
+    try {
+      const updates = {
+        resumeId,
+        resumeInfo,
+        profileCompleted: true,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      await this.updateUserProfile(uid, updates);
+      
+      // Store in local storage
+      await AsyncStorage.setItem('resume_id', resumeId);
+      await AsyncStorage.setItem('resume_info', JSON.stringify(resumeInfo));
+      this.authStateCallbacks.forEach(callback => callback(this.currentUser));
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating resume info:', error);
+      return false;
+    }
+  }
+
+  // Clear resume from user profile
+  async clearResumeInfo(uid: string): Promise<boolean> {
+    try {
+      const updates = {
+        resumeId: null,
+        resumeInfo: null,
+        profileCompleted: false,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      await this.updateUserProfile(uid, updates);
+      
+      // Clear from local storage
+      await AsyncStorage.multiRemove(['resume_id', 'resume_info', 'jobs_data', 'query_id']);
+      
+      return true;
+    } catch (error) {
+      console.error('Error clearing resume info:', error);
       return false;
     }
   }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,80 +13,103 @@ import {
   Chip,
   ProgressBar,
   Surface,
+  Divider,
 } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, typography, spacing, borderRadius } from '../config/theme';
 import { apiService } from '../services/apiService';
+import { authService } from '../services/authService';
 import { JobAnalysis, Job } from '../types';
 
 export default function AnalysisScreen() {
   const [loading, setLoading] = useState(false);
   const [analyses, setAnalyses] = useState<JobAnalysis[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState(0);
+  const [jobsData, setJobsData] = useState<Job[]>([]);
+  const [resumeId, setResumeId] = useState<string | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  useEffect(() => {
+    loadStoredData();
+  }, []);
+
+  const loadStoredData = async () => {
+    try {
+      setInitialLoading(true);
+      
+      // Try to load from AsyncStorage first (cached data)
+      const [storedResumeId, storedJobs] = await Promise.all([
+        AsyncStorage.getItem('resume_id'),
+        AsyncStorage.getItem('jobs_data')
+      ]);
+
+      if (storedResumeId) {
+        setResumeId(storedResumeId);
+      }
+
+      if (storedJobs) {
+        try {
+          const parsedJobs = JSON.parse(storedJobs);
+          setJobsData(parsedJobs);
+        } catch (error) {
+          console.error('Error parsing stored jobs:', error);
+        }
+      }
+
+      // If no local data, try to get from user profile
+      if (!storedResumeId) {
+        const currentUser = authService.getCurrentUser();
+        if (currentUser) {
+          const userProfile = await authService.getUserProfile(currentUser.uid);
+          if (userProfile && userProfile.resumeId) {
+            setResumeId(userProfile.resumeId);
+            // Cache for faster access
+            await AsyncStorage.setItem('resume_id', userProfile.resumeId);
+            
+            if (userProfile.resumeInfo) {
+              await AsyncStorage.setItem('resume_info', JSON.stringify(userProfile.resumeInfo));
+            }
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('Error loading stored data:', error);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
   const startAnalysis = async () => {
-    // In a real app, you'd get these from app state or props
-    // For now, we'll simulate the analysis
+    if (!resumeId) {
+      Alert.alert('Error', 'Please upload your resume first in the Upload tab.');
+      return;
+    }
+
+    if (!jobsData || jobsData.length === 0) {
+      Alert.alert('Error', 'Please search for jobs first in the Search tab.');
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Perform real skill gap analysis
+      const result = await apiService.analyzeSkills(resumeId, jobsData);
       
-      // Mock analysis data
-      const mockAnalyses: JobAnalysis[] = [
-        {
-          job_info: {
-            title: 'Senior Software Engineer',
-            company: 'Tech Corp',
-            location: 'Karachi, Pakistan',
-            apply_link: 'https://example.com',
-            similarity_score: 0.85,
-          },
-          skill_gap_analysis: {
-            matching_skills: ['JavaScript', 'React', 'Node.js', 'MongoDB'],
-            missing_skills: ['Kubernetes', 'Docker', 'AWS'],
-            skill_level_gaps: ['Advanced React patterns', 'System design'],
-            transferable_skills: ['Problem solving', 'Team collaboration'],
-          },
-          recommendations: {
-            priority_skills_to_learn: ['Kubernetes', 'System Design', 'AWS'],
-            learning_resources: [
-              'Kubernetes Documentation',
-              'System Design Interview Book',
-              'AWS Certified Developer Course',
-            ],
-            project_suggestions: [
-              'Build a microservices application',
-              'Deploy app using Kubernetes',
-              'Create AWS serverless function',
-            ],
-            timeline_estimate: '3-6 months',
-          },
-          job_match_assessment: {
-            overall_match_percentage: 85,
-            strengths: [
-              'Strong frontend development skills',
-              'Good understanding of full-stack development',
-              'Experience with modern JavaScript frameworks',
-            ],
-            concerns: [
-              'Limited experience with cloud technologies',
-              'No container orchestration experience',
-            ],
-            interview_preparation_tips: [
-              'Review system design principles',
-              'Practice coding problems on algorithms',
-              'Study cloud architecture patterns',
-            ],
-          },
-        },
-      ];
       
-      setAnalyses(mockAnalyses);
-      Alert.alert('Success', 'Analysis completed successfully!');
+      if (result.analyses && result.analyses.length > 0) {
+        setAnalyses(result.analyses);
+        setSelectedAnalysis(0);
+        Alert.alert('Success', `Analysis completed for ${result.analyses.length} jobs!`);
+      } else {
+        throw new Error('No analysis data received');
+      }
+      
     } catch (error: any) {
-      Alert.alert('Error', 'Analysis failed. Please try again.');
+      console.error('Analysis error:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Analysis failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -106,6 +129,34 @@ export default function AnalysisScreen() {
     </View>
   );
 
+  const renderAnalysisSelector = () => {
+    if (analyses.length <= 1) return null;
+
+    return (
+      <Card style={styles.selectorCard}>
+        <Card.Content>
+          <Text style={styles.selectorTitle}>Select Job Analysis ({analyses.length} total)</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.selectorScroll}>
+            {analyses.map((analysis, index) => (
+              <Button
+                key={index}
+                mode={selectedAnalysis === index ? 'contained' : 'outlined'}
+                onPress={() => setSelectedAnalysis(index)}
+                style={[
+                  styles.selectorButton,
+                  selectedAnalysis === index && { backgroundColor: colors.primary[600] }
+                ]}
+                compact
+              >
+                {`${index + 1}. ${analysis.job_info.title}`}
+              </Button>
+            ))}
+          </ScrollView>
+        </Card.Content>
+      </Card>
+    );
+  };
+
   const renderAnalysisContent = () => {
     if (analyses.length === 0) return null;
 
@@ -116,12 +167,19 @@ export default function AnalysisScreen() {
 
     return (
       <ScrollView style={styles.analysisContent}>
+        {/* Job Selection */}
+        {renderAnalysisSelector()}
+
         {/* Job Header */}
         <Card style={styles.card}>
           <Card.Content>
-            <Text style={styles.jobTitle}>{analysis.job_info.title}</Text>
-            <Text style={styles.jobCompany}>{analysis.job_info.company}</Text>
-            <Text style={styles.jobLocation}>{analysis.job_info.location}</Text>
+            <View style={styles.jobHeaderContent}>
+              <Text style={styles.jobTitle}>{analysis.job_info.title}</Text>
+              <Text style={styles.jobCompany}>{analysis.job_info.company}</Text>
+              <Text style={styles.jobLocation}>{analysis.job_info.location}</Text>
+            </View>
+            
+            <Divider style={styles.divider} />
             
             <View style={styles.matchContainer}>
               <Text style={styles.matchPercentage}>{Math.round(matchPercentage)}%</Text>
@@ -142,8 +200,12 @@ export default function AnalysisScreen() {
               <View style={styles.skillsHeader}>
                 <MaterialIcons name="check-circle" size={20} color={colors.green[600]} />
                 <Text style={styles.skillsTitle}>Matching Skills</Text>
+                <Text style={styles.skillCount}>({analysis.skill_gap_analysis.matching_skills.length})</Text>
               </View>
-              {renderSkillChips(analysis.skill_gap_analysis.matching_skills, colors.green[600])}
+              {analysis.skill_gap_analysis.matching_skills.length > 0 ? 
+                renderSkillChips(analysis.skill_gap_analysis.matching_skills, colors.green[600]) :
+                <Text style={styles.emptyText}>No matching skills found</Text>
+              }
             </Card.Content>
           </Card>
 
@@ -152,11 +214,28 @@ export default function AnalysisScreen() {
               <View style={styles.skillsHeader}>
                 <MaterialIcons name="cancel" size={20} color={colors.red[600]} />
                 <Text style={styles.skillsTitle}>Missing Skills</Text>
+                <Text style={styles.skillCount}>({analysis.skill_gap_analysis.missing_skills.length})</Text>
               </View>
-              {renderSkillChips(analysis.skill_gap_analysis.missing_skills, colors.red[600])}
+              {analysis.skill_gap_analysis.missing_skills.length > 0 ?
+                renderSkillChips(analysis.skill_gap_analysis.missing_skills, colors.red[600]) :
+                <Text style={styles.emptyText}>No missing skills identified</Text>
+              }
             </Card.Content>
           </Card>
         </View>
+
+        {/* Transferable Skills */}
+        {analysis.skill_gap_analysis.transferable_skills.length > 0 && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="swap-horiz" size={20} color={colors.blue[600]} />
+                <Text style={styles.sectionTitle}>Transferable Skills</Text>
+              </View>
+              {renderSkillChips(analysis.skill_gap_analysis.transferable_skills, colors.blue[600])}
+            </Card.Content>
+          </Card>
+        )}
 
         {/* Priority Skills */}
         <Card style={styles.card}>
@@ -231,32 +310,99 @@ export default function AnalysisScreen() {
             ))}
           </Card.Content>
         </Card>
+
+        {/* Project Suggestions */}
+        {analysis.recommendations.project_suggestions.length > 0 && (
+          <Card style={styles.card}>
+            <Card.Content>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="code" size={20} color={colors.indigo[600]} />
+                <Text style={styles.sectionTitle}>Project Suggestions</Text>
+              </View>
+              {analysis.recommendations.project_suggestions.map((project, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={styles.listItemText}>• {project}</Text>
+                </View>
+              ))}
+            </Card.Content>
+          </Card>
+        )}
+
+        {/* Interview Tips */}
+        <Card style={styles.card}>
+          <Card.Content>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="quiz" size={20} color={colors.teal[600]} />
+              <Text style={styles.sectionTitle}>Interview Preparation</Text>
+            </View>
+            {analysis.job_match_assessment.interview_preparation_tips.map((tip, index) => (
+              <View key={index} style={styles.listItem}>
+                <Text style={styles.listItemText}>• {tip}</Text>
+              </View>
+            ))}
+          </Card.Content>
+        </Card>
       </ScrollView>
     );
   };
 
+  const renderWelcomeScreen = () => (
+    <View style={styles.welcomeContainer}>
+      <Surface style={styles.welcomeCard}>
+        <MaterialIcons name="analytics" size={64} color={colors.primary[600]} />
+        <Text style={styles.welcomeTitle}>Skill Gap Analysis</Text>
+        <Text style={styles.welcomeSubtitle}>
+          AI-powered analysis of your skills vs job requirements
+        </Text>
+        
+        {!resumeId && (
+          <View style={styles.warningContainer}>
+            <MaterialIcons name="warning" size={20} color={colors.yellow[600]} />
+            <Text style={styles.warningText}>Upload your resume first</Text>
+          </View>
+        )}
+        
+        {!jobsData.length && resumeId && (
+          <View style={styles.warningContainer}>
+            <MaterialIcons name="search" size={20} color={colors.yellow[600]} />
+            <Text style={styles.warningText}>Search for jobs first</Text>
+          </View>
+        )}
+        
+        <Button
+          mode="contained"
+          onPress={startAnalysis}
+          loading={loading}
+          disabled={loading || !resumeId || !jobsData.length}
+          style={[
+            styles.startButton,
+            (!resumeId || !jobsData.length) && styles.disabledButton
+          ]}
+          contentStyle={styles.startButtonContent}
+        >
+          {loading ? 'Analyzing...' : `Analyze ${jobsData.length} Jobs`}
+        </Button>
+        
+        <Text style={styles.analysisNote}>
+         Analysis will be performed on all {jobsData.length} jobs
+        </Text>
+      </Surface>
+    </View>
+  );
+
+  if (initialLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary[600]} />
+        <Text style={styles.loadingText}>Loading your data...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {analyses.length === 0 ? (
-        <View style={styles.startContainer}>
-          <Surface style={styles.startCard}>
-            <MaterialIcons name="analytics" size={64} color={colors.primary[600]} />
-            <Text style={styles.startTitle}>Skill Gap Analysis</Text>
-            <Text style={styles.startSubtitle}>
-              AI-powered analysis of your skills vs job requirements
-            </Text>
-            <Button
-              mode="contained"
-              onPress={startAnalysis}
-              loading={loading}
-              disabled={loading}
-              style={styles.startButton}
-              contentStyle={styles.startButtonContent}
-            >
-              {loading ? 'Analyzing...' : 'Start AI Analysis'}
-            </Button>
-          </Surface>
-        </View>
+        renderWelcomeScreen()
       ) : (
         renderAnalysisContent()
       )}
@@ -288,48 +434,102 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.gray[50],
   },
-  startContainer: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    ...typography.body,
+    marginTop: spacing.md,
+    color: colors.gray[600],
+  },
+  welcomeContainer: {
     flex: 1,
     justifyContent: 'center',
     padding: spacing.xl,
   },
-  startCard: {
+  welcomeCard: {
     padding: spacing.xl,
     alignItems: 'center',
     borderRadius: borderRadius.lg,
     elevation: 4,
   },
-  startTitle: {
+  welcomeTitle: {
     ...typography.h2,
     marginTop: spacing.lg,
     marginBottom: spacing.md,
     textAlign: 'center',
     color: colors.gray[900],
   },
-  startSubtitle: {
+  welcomeSubtitle: {
     ...typography.body,
     textAlign: 'center',
     marginBottom: spacing.xl,
     color: colors.gray[600],
   },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.yellow[50],
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+  },
+  warningText: {
+    ...typography.bodySmall,
+    marginLeft: spacing.sm,
+    color: colors.yellow[800],
+  },
   startButton: {
     backgroundColor: colors.primary[600],
+    marginBottom: spacing.md,
+  },
+  disabledButton: {
+    backgroundColor: colors.gray[400],
   },
   startButtonContent: {
     paddingVertical: spacing.sm,
+  },
+  analysisNote: {
+    ...typography.caption,
+    textAlign: 'center',
+    color: colors.gray[600],
   },
   analysisContent: {
     flex: 1,
     padding: spacing.md,
   },
+  selectorCard: {
+    marginBottom: spacing.md,
+    borderRadius: borderRadius.lg,
+  },
+  selectorTitle: {
+    ...typography.h4,
+    marginBottom: spacing.md,
+    color: colors.gray[900],
+  },
+  selectorScroll: {
+    flexDirection: 'row',
+  },
+  selectorButton: {
+    marginRight: spacing.sm,
+    minWidth: 120,
+  },
   card: {
     marginBottom: spacing.md,
     borderRadius: borderRadius.lg,
+  },
+  jobHeaderContent: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   jobTitle: {
     ...typography.h3,
     color: colors.gray[900],
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   jobCompany: {
     ...typography.body,
@@ -339,7 +539,9 @@ const styles = StyleSheet.create({
   jobLocation: {
     ...typography.bodySmall,
     color: colors.gray[600],
-    marginBottom: spacing.md,
+  },
+  divider: {
+    marginVertical: spacing.md,
   },
   matchContainer: {
     alignItems: 'center',
@@ -375,6 +577,11 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     color: colors.gray[900],
   },
+  skillCount: {
+    ...typography.bodySmall,
+    marginLeft: spacing.xs,
+    color: colors.gray[600],
+  },
   skillsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -385,6 +592,11 @@ const styles = StyleSheet.create({
   },
   skillChipText: {
     fontSize: 12,
+  },
+  emptyText: {
+    ...typography.bodySmall,
+    color: colors.gray[500],
+    fontStyle: 'italic',
   },
   sectionHeader: {
     flexDirection: 'row',
