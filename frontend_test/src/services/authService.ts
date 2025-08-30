@@ -3,7 +3,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   User,
-  onAuthStateChanged
+  onAuthStateChanged,
+  updateProfile
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -13,25 +14,30 @@ import { UserProfile } from '../types';
 class AuthService {
   private currentUser: User | null = null;
   private authStateCallbacks: Array<(user: User | null) => void> = [];
+  private isSigningUp = false;
 
   constructor() {
     // Listen to auth state changes
     onAuthStateChanged(auth, (user) => {
-      console.log('Firebase auth state changed:', user ? user.uid : 'No user'); // Debug log
-      this.currentUser = user;
-      this.authStateCallbacks.forEach(callback => {
-        console.log('Calling auth state callback'); // Debug log
-        callback(user);
-      });
-      
-      // Load user data when authenticated
-      if (user) {
-        this.loadUserData(user.uid);
-      } else {
-        // Clear local data when signed out
-        this.clearLocalData();
-      }
+    // Ignore auth state changes during sign-up process
+    if (this.isSigningUp && user) {
+      console.log('Ignoring auth state change during sign-up');
+      return;
+    }
+    
+    console.log('Firebase auth state changed:', user ? user.uid : 'No user');
+    this.currentUser = user;
+    this.authStateCallbacks.forEach(callback => {
+      console.log('Calling auth state callback');
+      callback(user);
     });
+    
+    if (user) {
+      this.loadUserData(user.uid);
+    } else {
+      this.clearLocalData();
+    }
+  });
   }
 
   // Load user data from backend and store locally
@@ -67,6 +73,7 @@ class AuthService {
         'jobs_data',
         'query_id'
       ]);
+      console.log('Local data cleared');
     } catch (error) {
       console.error('Error clearing local data:', error);
     }
@@ -83,35 +90,41 @@ class AuthService {
   }
 
   // Check if user has completed profile (uploaded resume)
-  // Replace the hasCompletedProfile method in authService.ts:
-async hasCompletedProfile(): Promise<boolean> {
-  try {
-    // First check if we have a current user
-    if (!this.currentUser) return false;
-    
-    // Get profile from Firestore (source of truth)
-    const userProfile = await this.getUserProfile(this.currentUser.uid);
-    
-    if (userProfile) {
-      // Check if profile is marked as completed AND has resume data
-      const hasResume = Boolean(userProfile.resumeId && userProfile.resumeInfo);
-      const profileCompleted = userProfile.profileCompleted === true;
-      
-      // Update local storage to match backend state
-      if (hasResume && profileCompleted && userProfile.resumeId && userProfile.resumeInfo) {
-        await AsyncStorage.setItem('resume_id', userProfile.resumeId);
-        await AsyncStorage.setItem('resume_info', JSON.stringify(userProfile.resumeInfo));
+  async hasCompletedProfile(): Promise<boolean> {
+    try {
+      // First check if we have a current user
+      if (!this.currentUser) {
+        console.log('No current user, profile not completed');
+        return false;
       }
       
-      return hasResume && profileCompleted;
+      // Get profile from Firestore (source of truth)
+      const userProfile = await this.getUserProfile(this.currentUser.uid);
+      console.log('User profile from Firestore:', userProfile);
+      
+      if (userProfile) {
+        // Check if profile is marked as completed AND has resume data
+        const hasResume = Boolean(userProfile.resumeId && userProfile.resumeInfo);
+        const profileCompleted = userProfile.profileCompleted === true;
+        
+        console.log('Has resume:', hasResume, 'Profile completed flag:', profileCompleted);
+        
+        // Update local storage to match backend state
+        if (hasResume && profileCompleted && userProfile.resumeId && userProfile.resumeInfo) {
+          await AsyncStorage.setItem('resume_id', userProfile.resumeId);
+          await AsyncStorage.setItem('resume_info', JSON.stringify(userProfile.resumeInfo));
+        }
+        
+        return hasResume && profileCompleted;
+      }
+      
+      console.log('No user profile found in Firestore');
+      return false;
+    } catch (error) {
+      console.error('Error checking profile completion:', error);
+      return false;
     }
-    
-    return false;
-  } catch (error) {
-    console.error('Error checking profile completion:', error);
-    return false;
   }
-}
 
   // Get ID token for API requests
   async getIdToken(): Promise<string | null> {
@@ -146,14 +159,18 @@ async hasCompletedProfile(): Promise<boolean> {
     }
   }
 
-  // Sign up with email and password
-// In the signUp method, ensure immediate sign out:
-async signUp(email: string, password: string, displayName?: string): Promise<{ success: boolean; message: string; user?: User }> {
+  // Sign up with email and password - FIXED VERSION
+  async signUp(email: string, password: string, displayName?: string): Promise<{ success: boolean; message: string; user?: User }> {
   try {
+    this.isSigningUp = true;
+    
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // Create user profile in Firestore
+    if (displayName) {
+      await updateProfile(user, { displayName });
+    }
+    
     const userProfile: UserProfile = {
       uid: user.uid,
       email: user.email!,
@@ -166,15 +183,19 @@ async signUp(email: string, password: string, displayName?: string): Promise<{ s
     };
     
     await setDoc(doc(db, 'users', user.uid), userProfile);
-    
-    // Immediately sign out to prevent brief app access
     await signOut(auth);
+    
+    // Reset flag after delay
+    setTimeout(() => {
+      this.isSigningUp = false;
+    }, 1000);
     
     return {
       success: true,
-      message: 'Account created successfully. Please sign in.'
+      message: 'Account created successfully. Please sign in with your credentials.'
     };
   } catch (error: any) {
+    this.isSigningUp = false;
     return {
       success: false,
       message: this.getAuthErrorMessage(error.code)
@@ -182,25 +203,34 @@ async signUp(email: string, password: string, displayName?: string): Promise<{ s
   }
 }
 
-  // Sign out
- // Sign out
-async logout(): Promise<{ success: boolean; message: string }> {
-  try {
-    console.log('Signing out user:', this.currentUser?.uid); // Debug log
-    await signOut(auth);
-    console.log('Firebase signOut completed'); // Debug log
-    return {
-      success: true,
-      message: 'Signed out successfully'
-    };
-  } catch (error: any) {
-    console.error('Logout error:', error); // Debug log
-    return {
-      success: false,
-      message: 'Error signing out'
-    };
+  // Sign out - ENHANCED VERSION
+  async logout(): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('Starting logout process for user:', this.currentUser?.uid);
+      
+      // Clear local data first
+      await this.clearLocalData();
+      console.log('Local data cleared');
+      
+      // Sign out from Firebase
+      await signOut(auth);
+      console.log('Firebase signOut completed');
+      
+      // Reset local state
+      this.currentUser = null;
+      
+      return {
+        success: true,
+        message: 'Signed out successfully'
+      };
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      return {
+        success: false,
+        message: 'Error signing out: ' + error.message
+      };
+    }
   }
-}
 
   // Get user profile from Firestore
   async getUserProfile(uid: string): Promise<UserProfile | null> {
@@ -209,8 +239,11 @@ async logout(): Promise<{ success: boolean; message: string }> {
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        return docSnap.data() as UserProfile;
+        const data = docSnap.data() as UserProfile;
+        console.log('Retrieved user profile from Firestore:', data);
+        return data;
       }
+      console.log('No user profile found in Firestore for uid:', uid);
       return null;
     } catch (error) {
       console.error('Error getting user profile:', error);
@@ -223,6 +256,7 @@ async logout(): Promise<{ success: boolean; message: string }> {
     try {
       const docRef = doc(db, 'users', uid);
       await updateDoc(docRef, updates);
+      console.log('User profile updated in Firestore:', updates);
       
       // Update local storage
       const currentProfile = await AsyncStorage.getItem('user_profile');
@@ -238,21 +272,24 @@ async logout(): Promise<{ success: boolean; message: string }> {
     }
   }
 
-  // Update resume information in user profile
+  // Update resume information in user profile - ENHANCED VERSION
   async updateResumeInfo(uid: string, resumeId: string, resumeInfo: any): Promise<boolean> {
     try {
       const updates = {
         resumeId,
         resumeInfo,
-        profileCompleted: true,
+        profileCompleted: true, // This is the key flag
         lastUpdated: new Date().toISOString()
       };
       
+      console.log('Updating resume info in Firestore:', updates);
       await this.updateUserProfile(uid, updates);
       
       // Store in local storage
       await AsyncStorage.setItem('resume_id', resumeId);
       await AsyncStorage.setItem('resume_info', JSON.stringify(resumeInfo));
+      
+      // Force trigger auth state callbacks to refresh UI
       this.authStateCallbacks.forEach(callback => callback(this.currentUser));
       
       return true;

@@ -56,6 +56,7 @@ export default function ProfileSetupScreen({ onComplete }: ProfileSetupScreenPro
         await uploadResume(file);
       }
     } catch (error) {
+      console.error('Document picker error:', error);
       Alert.alert('Error', 'Failed to pick document');
     }
   };
@@ -63,20 +64,35 @@ export default function ProfileSetupScreen({ onComplete }: ProfileSetupScreenPro
   const uploadResume = async (file: DocumentPicker.DocumentPickerAsset) => {
     setUploading(true);
     try {
+      console.log('Starting resume upload...');
+      
       const result = await apiService.uploadResume(
         file.uri,
         file.name,
         file.mimeType || 'application/pdf'
       );
 
+      console.log('Resume upload result:', result);
+
       // Store in user profile in backend
       const currentUser = authService.getCurrentUser();
       if (currentUser) {
-        await authService.updateResumeInfo(currentUser.uid, result.resume_id, result.resume_info);
-        setResumeInfo(result.resume_info);
-        setState({ ...state, resumeUploaded: true, step: 'complete' });
+        console.log('Updating user profile with resume info...');
         
-        Alert.alert('Success', 'Resume processed successfully!');
+        const success = await authService.updateResumeInfo(
+          currentUser.uid, 
+          result.resume_id, 
+          result.resume_info
+        );
+        
+        if (success) {
+          setResumeInfo(result.resume_info);
+          setState({ ...state, resumeUploaded: true, step: 'complete' });
+          
+          Alert.alert('Success', 'Resume processed successfully!');
+        } else {
+          throw new Error('Failed to update user profile');
+        }
       } else {
         throw new Error('User not authenticated');
       }
@@ -84,15 +100,33 @@ export default function ProfileSetupScreen({ onComplete }: ProfileSetupScreenPro
       console.error('Upload error:', error);
       Alert.alert(
         'Error',
-        error.response?.data?.detail || 'Failed to process resume'
+        error.response?.data?.detail || error.message || 'Failed to process resume'
       );
     } finally {
       setUploading(false);
     }
   };
 
-  const completeSetup = () => {
-    onComplete();
+  const completeSetup = async () => {
+    try {
+      console.log('Completing profile setup...');
+      
+      // Ensure profile is marked as completed in Firestore
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        await authService.updateUserProfile(currentUser.uid, {
+          profileCompleted: true,
+          lastUpdated: new Date().toISOString()
+        });
+        console.log('Profile marked as completed');
+      }
+      
+      // Trigger the onComplete callback
+      onComplete();
+    } catch (error) {
+      console.error('Error completing setup:', error);
+      Alert.alert('Error', 'Failed to complete setup. Please try again.');
+    }
   };
 
   const renderWelcome = () => (
@@ -279,21 +313,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    minHeight: screenHeight - 100, // Ensure full screen coverage
+    minHeight: screenHeight - 100,
   },
   stepContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: spacing.lg,
-    minHeight: screenHeight * 0.8, // Ensure proper centering
+    minHeight: screenHeight * 0.8,
   },
   progressBar: {
     width: '100%',
     height: 4,
     marginBottom: spacing.xl,
     borderRadius: 2,
-    alignSelf: 'stretch', // Ensure full width
+    alignSelf: 'stretch',
   },
   iconWrapper: {
     marginBottom: spacing.lg,
@@ -339,7 +373,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     borderRadius: borderRadius.lg,
     elevation: 2,
-    maxWidth: 400, // Limit width on larger screens
+    maxWidth: 400,
   },
   featureList: {
     gap: spacing.lg,
@@ -359,7 +393,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     borderRadius: borderRadius.lg,
     elevation: 2,
-    maxWidth: 400, // Limit width on larger screens
+    maxWidth: 400,
   },
   uploadArea: {
     padding: spacing.xl,
@@ -402,7 +436,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     borderRadius: borderRadius.lg,
     elevation: 2,
-    maxWidth: 400, // Limit width on larger screens
+    maxWidth: 400,
   },
   summaryTitle: {
     ...typography.h4,
@@ -427,7 +461,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderRadius: borderRadius.md,
     elevation: 2,
-    minWidth: 200, // Ensure minimum button width
+    minWidth: 200,
   },
   buttonContent: {
     paddingVertical: spacing.sm,

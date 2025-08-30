@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, typography, spacing, borderRadius } from '../config/theme';
 import { authService } from '../services/authService';
 import { UserProfile } from '../types';
-import { TouchableOpacity } from 'react-native';
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -37,6 +36,7 @@ export default function ProfileScreen() {
     reportsGenerated: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
@@ -115,33 +115,48 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = () => {
-  console.log('handleLogout called'); // Add this debug log
-  Alert.alert(
-    'Confirm Logout',
-    'Are you sure you want to sign out?',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          console.log('Sign out confirmed'); // Add this debug log
-          try {
-            const result = await authService.logout();
-            console.log('Logout result:', result);
-            if (!result.success) {
-              Alert.alert('Error', result.message);
+  // FIXED LOGOUT HANDLER
+  const handleLogout = useCallback(() => {
+    console.log('handleLogout called');
+    
+    if (signingOut) {
+      console.log('Already signing out, ignoring duplicate call');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            console.log('Sign out confirmed');
+            setSigningOut(true);
+            
+            try {
+              const result = await authService.logout();
+              console.log('Logout result:', result);
+              
+              if (!result.success) {
+                Alert.alert('Error', result.message);
+                setSigningOut(false);
+              }
+              // If successful, the auth state change will handle navigation
+              // No need to manually navigate or show success message
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+              setSigningOut(false);
             }
-          } catch (error) {
-            console.error('Logout error:', error);
-            Alert.alert('Error', 'Failed to sign out');
-          }
+          },
         },
-      },
-    ]
-  );
-};
+      ],
+      { cancelable: true }
+    );
+  }, [signingOut]);
 
   if (!user) {
     return (
@@ -176,7 +191,6 @@ export default function ProfileScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => {
-
                     setEditing(false);
                     setEditForm({
                       displayName: user.displayName || '',
@@ -321,8 +335,10 @@ export default function ProfileScreen() {
             style={styles.logoutButton}
             textColor={colors.red[600]}
             icon="logout"
+            loading={signingOut}
+            disabled={signingOut}
           >
-            Sign Out
+            {signingOut ? 'Signing Out...' : 'Sign Out'}
           </Button>
         </Card.Content>
       </Card>
@@ -425,9 +441,9 @@ const styles = StyleSheet.create({
     color: colors.red[800],
   },
   logoutButton: {
-  borderColor: colors.red[600],
-  marginTop: spacing.sm,
-},
+    borderColor: colors.red[600],
+    marginTop: spacing.sm,
+  },
   footer: {
     alignItems: 'center',
     paddingVertical: spacing.xl,

@@ -43,33 +43,41 @@ export default function AuthScreen() {
     try {
       let result;
       if (isSignUp) {
+        // Sign up flow
         result = await authService.signUp(
           formData.email,
           formData.password,
           formData.displayName
         );
-      } else {
-        result = await authService.signIn(formData.email, formData.password);
-      }
-
-      // In the handleSubmit function, modify the sign-up success handling:
-      if (result.success) {
-        if (isSignUp) {
-          // Don't show success alert immediately, just switch to sign in
+        
+        if (result.success) {
+          // Clear form and switch to sign in
+          setFormData({ email:'', password: '', displayName: '' });
           setIsSignUp(false);
-          setFormData({ email: formData.email, password: '', displayName: '' });
-          // Show alert after state is updated
-          setTimeout(() => {
-            Alert.alert('Success', 'Account created successfully! Please sign in with your credentials.');
-          }, 100);
+          
+          // Show success message
+          Alert.alert(
+            'Account Created',
+            'Your account has been created successfully! Please sign in with your credentials.',
+            [{ text: 'OK' }]
+          );
         } else {
-          // For sign in, navigation will happen automatically via auth state change
-          // Don't show alert here to avoid confusion
+          Alert.alert('Sign Up Error', result.message);
         }
-      }else {
-        Alert.alert('Error', result.message);
+      } else {
+        // Sign in flow
+        result = await authService.signIn(formData.email, formData.password);
+        
+        if (result.success) {
+          // Success will be handled by auth state change
+          // Clear form
+          setFormData({ email: '', password: '', displayName: '' });
+        } else {
+          Alert.alert('Sign In Error', result.message);
+        }
       }
     } catch (error) {
+      console.error('Auth error:', error);
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);

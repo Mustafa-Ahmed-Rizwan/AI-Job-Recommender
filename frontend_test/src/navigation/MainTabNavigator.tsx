@@ -9,6 +9,8 @@ import SearchScreen from '../screens/SearchScreen';
 import AnalysisScreen from '../screens/AnalysisScreen';
 import ReportScreen from '../screens/ReportScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import { Alert, TouchableOpacity } from 'react-native';
+import { authService } from '../services/authService';
 
 import { MainTabParamList } from '../types';
 
@@ -64,6 +66,33 @@ export default function MainTabNavigator() {
           fontFamily: 'Inter-SemiBold',
         },
         headerTintColor: '#ffffff',
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                'Sign Out',
+                'Are you sure you want to sign out?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Sign Out',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await authService.logout();
+                      } catch (error) {
+                        Alert.alert('Error', 'Failed to sign out');
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+            style={{ marginRight: 16, padding: 8 }}
+          >
+            <MaterialIcons name="logout" size={24} color="#ffffff" />
+          </TouchableOpacity>
+        ),
       })}
     >
       <Tab.Screen 
