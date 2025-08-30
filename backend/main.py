@@ -1,5 +1,5 @@
 # backend/main.py - FastAPI Backend
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List, Any, Optional
@@ -10,12 +10,10 @@ import asyncio
 import logging
 
 # Import your existing modules
-
 from backend.src.resume_processor import ResumeProcessor
 from backend.src.skill_analyzer import SkillGapAnalyzer
 from backend.src.job_api import fetch_jobs
 from backend.middleware.auth import get_current_user, get_verified_user
-from fastapi import Depends
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +29,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8501", "http://localhost:3000"],  # Add your frontend URLs
+    allow_origins=["http://localhost:8501", "http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,7 +38,6 @@ app.add_middleware(
 # Initialize processors globally
 resume_processor = None
 skill_analyzer = None
-
 
 CITIES = {
     "Pakistan": ["Karachi", "Lahore", "Islamabad", "Rawalpindi", "Faisalabad", "Multan", "Hyderabad", "Peshawar", "Quetta", "Sialkot"],
@@ -91,8 +88,19 @@ class ReportResponse(BaseModel):
     report: Dict[str, Any]
     message: str
 
-# In-memory storage for session data (in production, use Redis or database)
+class UserProfileResponse(BaseModel):
+    success: bool
+    profile: Optional[Dict[str, Any]] = None
+    message: str
+
+class ResumeHistoryResponse(BaseModel):
+    success: bool
+    resumes: Optional[List[Dict[str, Any]]] = None
+    message: str
+
+# Enhanced in-memory storage with user-specific data
 session_storage = {}
+user_resumes = {}
 
 # API Endpoints
 
@@ -110,6 +118,14 @@ async def health_check():
         "timestamp": datetime.now().isoformat()
     }
 
+# ---------------- Public Routes ---------------- #
+
+@app.get("/cities/{country}")
+async def get_cities(country: str):
+    """Get cities for a given country"""
+    cities = CITIES.get(country, [])
+    return {"cities": cities, "country": country}
+
 # ---------------- Protected Routes ---------------- #
 
 @app.post("/upload-resume", response_model=ResumeProcessResponse)
@@ -117,7 +133,7 @@ async def upload_resume(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user)
 ):
-    """Upload and process resume file"""
+    """Upload and process resume file for profile completion"""
     if not resume_processor:
         raise HTTPException(status_code=500, detail="Resume processor not initialized")
     
@@ -126,9 +142,11 @@ async def upload_resume(
         raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported")
     
     try:
+        user_uid = current_user["uid"]
+        
         # Read file content
         content = await file.read()
-        logger.info("File read complete")  # Add logs at key steps
+        logger.info(f"File read complete for user: {user_uid}")
         
         # Create a file-like object for processing
         from io import BytesIO
@@ -143,29 +161,146 @@ async def upload_resume(
         
         # Process resume
         resume_info = resume_processor.extract_resume_info(resume_text)
-        logger.info("Resume info extracted")
+        logger.info(f"Resume info extracted for user: {user_uid}")
         
-        # Generate user ID and store resume
-        user_id = str(uuid.uuid4())
-        resume_id = resume_processor.store_resume_in_pinecone(resume_info, user_id)
-        logger.info("Stored in Pinecone")
+        # Generate resume ID and store in Pinecone
+        resume_id = resume_processor.store_resume_in_pinecone(resume_info, user_uid)
+        logger.info(f"Stored in Pinecone with ID: {resume_id}")
         
-        # Store in session (in production, use proper session management)
-        session_storage[user_id] = {
+        # Store in session with user-specific data
+        if user_uid not in session_storage:
+            session_storage[user_uid] = {}
+        
+        session_storage[user_uid].update({
             "resume_info": resume_info,
             "resume_id": resume_id,
-            "created_at": datetime.now().isoformat()
-        }
+            "filename": file.filename,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat()
+        })
+        
+        # Also store in user_resumes for history
+        if user_uid not in user_resumes:
+            user_resumes[user_uid] = []
+        
+        # Remove old resume if exists (user can only have one active resume)
+        user_resumes[user_uid] = [{
+            "resume_id": resume_id,
+            "filename": file.filename,
+            "resume_info": resume_info,
+            "uploaded_at": datetime.now().isoformat()
+        }]
         
         return ResumeProcessResponse(
             resume_id=resume_id,
             resume_info=resume_info,
-            message="Resume processed successfully"
+            message="Resume processed and profile completed successfully"
         )
         
     except Exception as e:
-        logger.error(f"Error processing resume: {str(e)}")
+        logger.error(f"Error processing resume for user {user_uid}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing resume: {str(e)}")
+
+@app.get("/user/profile", response_model=UserProfileResponse)
+async def get_user_profile(current_user: dict = Depends(get_current_user)):
+    """Get user profile including resume information"""
+    user_uid = current_user["uid"]
+    
+    try:
+        # Check if user has session data
+        user_session = session_storage.get(user_uid, {})
+        user_resume_history = user_resumes.get(user_uid, [])
+        
+        if not user_session and not user_resume_history:
+            return UserProfileResponse(
+                success=True,
+                profile=None,
+                message="No profile data found. Please complete your profile."
+            )
+        
+        profile_data = {
+            "user_info": {
+                "uid": user_uid,
+                "email": current_user.get("email"),
+                "email_verified": current_user.get("email_verified", False)
+            },
+            "resume_info": user_session.get("resume_info"),
+            "resume_id": user_session.get("resume_id"),
+            "filename": user_session.get("filename"),
+            "profile_completed": bool(user_session.get("resume_info")),
+            "last_updated": user_session.get("updated_at"),
+            "resume_history": user_resume_history
+        }
+        
+        return UserProfileResponse(
+            success=True,
+            profile=profile_data,
+            message="Profile retrieved successfully"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting user profile: {str(e)}")
+        return UserProfileResponse(
+            success=False,
+            message=f"Error retrieving profile: {str(e)}"
+        )
+
+@app.get("/user/resumes", response_model=ResumeHistoryResponse)
+async def get_user_resumes(current_user: dict = Depends(get_current_user)):
+    """Get user's resume history"""
+    user_uid = current_user["uid"]
+    
+    try:
+        user_resume_history = user_resumes.get(user_uid, [])
+        
+        return ResumeHistoryResponse(
+            success=True,
+            resumes=user_resume_history,
+            message=f"Found {len(user_resume_history)} resumes"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting user resumes: {str(e)}")
+        return ResumeHistoryResponse(
+            success=False,
+            message=f"Error retrieving resumes: {str(e)}"
+        )
+
+@app.delete("/user/resume/{resume_id}")
+async def delete_user_resume(
+    resume_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete user's resume"""
+    user_uid = current_user["uid"]
+    
+    try:
+        # Clear from session storage
+        if user_uid in session_storage:
+            if session_storage[user_uid].get("resume_id") == resume_id:
+                del session_storage[user_uid]
+        
+        # Clear from user resumes
+        if user_uid in user_resumes:
+            user_resumes[user_uid] = [
+                resume for resume in user_resumes[user_uid] 
+                if resume.get("resume_id") != resume_id
+            ]
+        
+        # In a real implementation, you would also delete from Pinecone
+        # resume_processor.delete_resume_from_pinecone(resume_id)
+        
+        return {
+            "success": True,
+            "message": "Resume deleted successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error deleting resume: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error deleting resume: {str(e)}"
+        }
 
 @app.post("/search-jobs", response_model=JobSearchResponse)
 async def search_jobs(
@@ -175,6 +310,12 @@ async def search_jobs(
     """Search for jobs based on query"""
     if not resume_processor:
         raise HTTPException(status_code=500, detail="Resume processor not initialized")
+    
+    user_uid = current_user["uid"]
+    
+    # Check if user has completed profile
+    if user_uid not in session_storage or not session_storage[user_uid].get("resume_info"):
+        raise HTTPException(status_code=400, detail="Please complete your profile by uploading a resume first")
     
     try:
         # Fetch jobs
@@ -188,10 +329,19 @@ async def search_jobs(
             )
         
         # Generate query ID and store jobs in Pinecone
-        query_id = f"query_{uuid.uuid4()}_{int(datetime.now().timestamp())}"
+        query_id = f"query_{user_uid}_{int(datetime.now().timestamp())}"
         job_ids = resume_processor.store_jobs_in_pinecone(jobs, query_id)
         
-        logger.info(f"Found and stored {len(jobs)} jobs with query_id: {query_id}")
+        # Store query info in user session
+        session_storage[user_uid]["last_search"] = {
+            "query": request.job_query,
+            "location": request.location,
+            "query_id": query_id,
+            "jobs_count": len(jobs),
+            "searched_at": datetime.now().isoformat()
+        }
+        
+        logger.info(f"Found and stored {len(jobs)} jobs with query_id: {query_id} for user: {user_uid}")
         
         return JobSearchResponse(
             jobs=jobs,
@@ -200,7 +350,7 @@ async def search_jobs(
         )
         
     except Exception as e:
-        logger.error(f"Error searching jobs: {str(e)}")
+        logger.error(f"Error searching jobs for user {user_uid}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error searching jobs: {str(e)}")
 
 @app.get("/similar-jobs/{resume_id}")
@@ -214,8 +364,22 @@ async def get_similar_jobs(
     if not resume_processor:
         raise HTTPException(status_code=500, detail="Resume processor not initialized")
     
+    user_uid = current_user["uid"]
+    
+    # Verify user owns this resume
+    user_session = session_storage.get(user_uid, {})
+    if user_session.get("resume_id") != resume_id:
+        raise HTTPException(status_code=403, detail="Access denied: Resume does not belong to current user")
+    
     try:
         similar_jobs = resume_processor.find_similar_jobs(resume_id, top_k, query_id)
+        
+        # Store similar jobs in session for analysis
+        session_storage[user_uid]["similar_jobs"] = {
+            "jobs": similar_jobs,
+            "query_id": query_id,
+            "retrieved_at": datetime.now().isoformat()
+        }
         
         return {
             "similar_jobs": similar_jobs,
@@ -224,7 +388,7 @@ async def get_similar_jobs(
         }
         
     except Exception as e:
-        logger.error(f"Error finding similar jobs: {str(e)}")
+        logger.error(f"Error finding similar jobs for user {user_uid}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error finding similar jobs: {str(e)}")
 
 @app.post("/analyze-skills", response_model=SkillAnalysisResponse)
@@ -236,22 +400,31 @@ async def analyze_skills(
     if not skill_analyzer:
         raise HTTPException(status_code=500, detail="Skill analyzer not initialized")
     
+    user_uid = current_user["uid"]
+    
     # Find resume info from session storage
-    resume_info = None
-    for user_id, session_data in session_storage.items():
-        if session_data.get("resume_id") == request.resume_id:
-            resume_info = session_data.get("resume_info")
-            break
+    user_session = session_storage.get(user_uid, {})
+    resume_info = user_session.get("resume_info")
     
     if not resume_info:
-        raise HTTPException(status_code=404, detail="Resume not found. Please upload resume first.")
+        raise HTTPException(status_code=404, detail="Resume not found. Please complete your profile first.")
+    
+    # Verify user owns this resume
+    if user_session.get("resume_id") != request.resume_id:
+        raise HTTPException(status_code=403, detail="Access denied: Resume does not belong to current user")
     
     try:
         # Analyze top 5 jobs to save time/costs
         jobs_to_analyze = request.jobs[:5]
         analyses = skill_analyzer.analyze_resume_vs_jobs(resume_info, jobs_to_analyze)
         
-        logger.info(f"Completed skill gap analysis for {len(analyses)} jobs")
+        # Store analyses in session
+        session_storage[user_uid]["analyses"] = {
+            "results": analyses,
+            "analyzed_at": datetime.now().isoformat()
+        }
+        
+        logger.info(f"Completed skill gap analysis for {len(analyses)} jobs for user: {user_uid}")
         
         return SkillAnalysisResponse(
             analyses=analyses,
@@ -259,11 +432,14 @@ async def analyze_skills(
         )
         
     except Exception as e:
-        logger.error(f"Error during skill analysis: {str(e)}")
+        logger.error(f"Error during skill analysis for user {user_uid}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error during skill analysis: {str(e)}")
 
 @app.post("/generate-report", response_model=ReportResponse)
-async def generate_report(request: ReportRequest):
+async def generate_report(
+    request: ReportRequest,
+    current_user: dict = Depends(get_current_user)
+):
     """Generate comprehensive report from analyses"""
     if not skill_analyzer:
         raise HTTPException(status_code=500, detail="Skill analyzer not initialized")
@@ -271,11 +447,20 @@ async def generate_report(request: ReportRequest):
     if not request.analyses:
         raise HTTPException(status_code=400, detail="No analyses provided")
     
+    user_uid = current_user["uid"]
+    
     try:
         overall_report = skill_analyzer.generate_overall_report(request.analyses)
         
         if 'error' in overall_report:
             raise HTTPException(status_code=500, detail=overall_report['error'])
+        
+        # Store report in session
+        if user_uid in session_storage:
+            session_storage[user_uid]["report"] = {
+                "data": overall_report,
+                "generated_at": datetime.now().isoformat()
+            }
         
         return ReportResponse(
             report=overall_report,
@@ -283,58 +468,8 @@ async def generate_report(request: ReportRequest):
         )
         
     except Exception as e:
-        logger.error(f"Error generating report: {str(e)}")
+        logger.error(f"Error generating report for user {user_uid}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")
-
-@app.get("/session/{user_id}")
-async def get_session_data(current_user: dict = Depends(get_current_user)):
-    """Get session data for the current user"""
-    user_id = current_user["id"]
-    if user_id not in session_storage:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    return {
-        "session_data": session_storage[user_id],
-        "message": "Session data retrieved successfully"
-    }
-
-@app.delete("/session/{user_id}")
-async def clear_session(current_user: dict = Depends(get_current_user)):
-    """Clear session data for the current user"""
-    user_id = current_user["id"]
-    if user_id in session_storage:
-        del session_storage[user_id]
-    
-    return {"message": "Session cleared successfully"}
-
-# Background task example for heavy processing
-@app.post("/analyze-skills-async/{resume_id}")
-async def analyze_skills_async(
-    resume_id: str,
-    background_tasks: BackgroundTasks,
-    jobs: List[Dict[str, Any]],
-    current_user: dict = Depends(get_current_user)
-):
-    """Start skill analysis as background task"""
-    task_id = str(uuid.uuid4())
-    
-    def run_analysis():
-        # This would run in background
-        # You could store results in database or cache
-        pass
-    
-    background_tasks.add_task(run_analysis)
-    
-    return {
-        "task_id": task_id,
-        "message": "Analysis started in background",
-        "status": "processing"
-    }
-@app.get("/cities/{country}")
-async def get_cities(country: str):
-    """Get cities for a given country"""
-    cities = CITIES.get(country, [])
-    return {"cities": cities, "country": country}
 
 @app.post("/suggest-jobs")
 async def suggest_jobs(
@@ -345,16 +480,173 @@ async def suggest_jobs(
     if not skill_analyzer:
         raise HTTPException(status_code=500, detail="Skill analyzer not initialized")
     
+    user_uid = current_user["uid"]
     resume_info = request.get('resume_info')
+    
+    # If no resume_info provided, get from session
     if not resume_info:
-        raise HTTPException(status_code=400, detail="Resume info required")
+        user_session = session_storage.get(user_uid, {})
+        resume_info = user_session.get("resume_info")
+    
+    if not resume_info:
+        raise HTTPException(status_code=400, detail="Resume info required. Please complete your profile first.")
     
     try:
         suggestions = skill_analyzer.suggest_job_keywords(resume_info)
         return {"suggestions": suggestions, "message": "Job suggestions generated"}
     except Exception as e:
-        logger.error(f"Error generating job suggestions: {str(e)}")
+        logger.error(f"Error generating job suggestions for user {user_uid}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error generating suggestions: {str(e)}")
+
+@app.get("/session/{user_id}")
+async def get_session_data(current_user: dict = Depends(get_current_user)):
+    """Get session data for the current user"""
+    user_uid = current_user["uid"]
+    
+    if user_uid not in session_storage:
+        return {
+            "session_data": None,
+            "message": "No session data found"
+        }
+    
+    return {
+        "session_data": session_storage[user_uid],
+        "message": "Session data retrieved successfully"
+    }
+
+@app.delete("/session/{user_id}")
+async def clear_session(current_user: dict = Depends(get_current_user)):
+    """Clear session data for the current user"""
+    user_uid = current_user["uid"]
+    
+    if user_uid in session_storage:
+        del session_storage[user_uid]
+    
+    if user_uid in user_resumes:
+        del user_resumes[user_uid]
+    
+    return {"message": "Session cleared successfully"}
+
+# Background task for heavy processing
+@app.post("/analyze-skills-async/{resume_id}")
+async def analyze_skills_async(
+    resume_id: str,
+    background_tasks: BackgroundTasks,
+    jobs: List[Dict[str, Any]],
+    current_user: dict = Depends(get_current_user)
+):
+    """Start skill analysis as background task"""
+    user_uid = current_user["uid"]
+    
+    # Verify user owns this resume
+    user_session = session_storage.get(user_uid, {})
+    if user_session.get("resume_id") != resume_id:
+        raise HTTPException(status_code=403, detail="Access denied: Resume does not belong to current user")
+    
+    task_id = str(uuid.uuid4())
+    
+    def run_analysis():
+        try:
+            # Store task status
+            if user_uid not in session_storage:
+                session_storage[user_uid] = {}
+            
+            session_storage[user_uid][f"task_{task_id}"] = {
+                "status": "processing",
+                "started_at": datetime.now().isoformat()
+            }
+            
+            # Run actual analysis (this would be implemented)
+            # analyses = skill_analyzer.analyze_resume_vs_jobs(resume_info, jobs)
+            
+            # Update task status
+            session_storage[user_uid][f"task_{task_id}"] = {
+                "status": "completed",
+                "started_at": session_storage[user_uid][f"task_{task_id}"]["started_at"],
+                "completed_at": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            # Update task status with error
+            if user_uid in session_storage:
+                session_storage[user_uid][f"task_{task_id}"] = {
+                    "status": "failed",
+                    "error": str(e),
+                    "failed_at": datetime.now().isoformat()
+                }
+    
+    background_tasks.add_task(run_analysis)
+    
+    return {
+        "task_id": task_id,
+        "message": "Analysis started in background",
+        "status": "processing"
+    }
+
+@app.get("/task/{task_id}")
+async def get_task_status(
+    task_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get background task status"""
+    user_uid = current_user["uid"]
+    
+    user_session = session_storage.get(user_uid, {})
+    task_data = user_session.get(f"task_{task_id}")
+    
+    if not task_data:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {
+        "task_id": task_id,
+        "status": task_data.get("status", "unknown"),
+        "data": task_data
+    }
+
+# User management endpoints
+@app.post("/user/profile")
+async def update_user_profile(
+    profile_data: dict,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update user profile information"""
+    user_uid = current_user["uid"]
+    
+    try:
+        # Update session storage
+        if user_uid not in session_storage:
+            session_storage[user_uid] = {}
+        
+        session_storage[user_uid].update({
+            "profile_data": profile_data,
+            "profile_updated_at": datetime.now().isoformat()
+        })
+        
+        return {
+            "success": True,
+            "message": "Profile updated successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error updating profile for user {user_uid}: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error updating profile: {str(e)}"
+        }
+
+# Admin endpoints (for debugging/monitoring)
+@app.get("/admin/stats")
+async def get_admin_stats(current_user: dict = Depends(get_verified_user)):
+    """Get system statistics (admin only)"""
+    return {
+        "total_users": len(session_storage),
+        "total_resumes": sum(len(resumes) for resumes in user_resumes.values()),
+        "active_sessions": len(session_storage),
+        "system_health": {
+            "resume_processor": resume_processor is not None,
+            "skill_analyzer": skill_analyzer is not None
+        }
+    }
 
 # Error handlers
 @app.exception_handler(404)
@@ -364,6 +656,14 @@ async def not_found_handler(request, exc):
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
     return {"error": "Internal server error", "detail": str(exc)}
+
+@app.exception_handler(403)
+async def forbidden_handler(request, exc):
+    return {"error": "Access forbidden", "detail": str(exc)}
+
+@app.exception_handler(401)
+async def unauthorized_handler(request, exc):
+    return {"error": "Unauthorized", "detail": "Please sign in to access this resource"}
 
 if __name__ == "__main__":
     import uvicorn

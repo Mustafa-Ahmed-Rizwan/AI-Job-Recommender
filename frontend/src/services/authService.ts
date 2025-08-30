@@ -6,8 +6,9 @@ import {
   User,
   onAuthStateChanged
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteField } from 'firebase/firestore';
 import { auth, db } from '../config/firebase.js';
+
 try {
   // This will ensure Firebase is initialized
   import('../config/firebase.js');
@@ -15,18 +16,22 @@ try {
   console.error('Firebase initialization error:', error);
 }
 
+
 export interface UserProfile {
   uid: string;
   email: string;
   displayName?: string;
   createdAt: string;
   lastLogin: string;
+  profileCompleted?: boolean;
+  resumeId?: string;
+  lastResumeUpdate?: string;
 }
 
 class AuthService {
   private currentUser: User | null = null;
   private authStateCallbacks: Array<(user: User | null, isNewSignUp?: boolean) => void> = [];
-  private isSignUpFlow: boolean = false; // Track if we're in sign-up flow
+  private isSignUpFlow: boolean = false;
 
   constructor() {
     // Listen to auth state changes
@@ -55,7 +60,7 @@ class AuthService {
   async getIdToken(): Promise<string | null> {
     if (!this.currentUser) return null;
     try {
-      return await this.currentUser.getIdToken();
+      return await this.currentUser.getIdToken(true); // Force refresh token
     } catch (error) {
       console.error('Error getting ID token:', error);
       return null;
@@ -65,12 +70,14 @@ class AuthService {
   // Sign in with email and password
   async signIn(email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> {
     try {
-      this.isSignUpFlow = false; // Explicitly set to false for sign-in
+      this.isSignUpFlow = false;
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Update last login
-      await this.updateUserProfile(user.uid, { lastLogin: new Date().toISOString() });
+      // Update last login in Firestore
+      await this.updateUserProfile(user.uid, { 
+        lastLogin: new Date().toISOString() 
+      });
       
       return {
         success: true,
@@ -78,6 +85,7 @@ class AuthService {
         user
       };
     } catch (error: any) {
+      console.error('Sign in error:', error);
       return {
         success: false,
         message: this.getAuthErrorMessage(error.code)
@@ -88,7 +96,7 @@ class AuthService {
   // Sign up with email and password
   async signUp(email: string, password: string, displayName?: string): Promise<{ success: boolean; message: string; user?: User }> {
     try {
-      this.isSignUpFlow = true; // Set flag before creating user
+      this.isSignUpFlow = true;
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
@@ -98,7 +106,8 @@ class AuthService {
         email: user.email!,
         displayName: displayName || '',
         createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
+        lastLogin: new Date().toISOString(),
+        profileCompleted: false
       };
       
       await setDoc(doc(db, 'users', user.uid), userProfile);
@@ -112,7 +121,8 @@ class AuthService {
         user
       };
     } catch (error: any) {
-      this.isSignUpFlow = false; // Reset flag on error
+      console.error('Sign up error:', error);
+      this.isSignUpFlow = false;
       return {
         success: false,
         message: this.getAuthErrorMessage(error.code)
@@ -123,13 +133,14 @@ class AuthService {
   // Sign out
   async logout(): Promise<{ success: boolean; message: string }> {
     try {
-      this.isSignUpFlow = false; // Reset flag on logout
+      this.isSignUpFlow = false;
       await signOut(auth);
       return {
         success: true,
         message: 'Signed out successfully'
       };
     } catch (error: any) {
+      console.error('Logout error:', error);
       return {
         success: false,
         message: 'Error signing out'
@@ -138,9 +149,12 @@ class AuthService {
   }
 
   // Get user profile from Firestore
-  async getUserProfile(uid: string): Promise<UserProfile | null> {
+  async getUserProfile(uid?: string): Promise<UserProfile | null> {
     try {
-      const docRef = doc(db, 'users', uid);
+      const userId = uid || this.currentUser?.uid;
+      if (!userId) return null;
+      
+      const docRef = doc(db, 'users', userId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -165,6 +179,57 @@ class AuthService {
     }
   }
 
+  // Mark profile as completed
+  async markProfileCompleted(resumeId: string): Promise<boolean> {
+    if (!this.currentUser) return false;
+    
+    try {
+      const updates: Partial<UserProfile> = {
+        profileCompleted: true,
+        resumeId: resumeId,
+        lastResumeUpdate: new Date().toISOString()
+      };
+      
+      return await this.updateUserProfile(this.currentUser.uid, updates);
+    } catch (error) {
+      console.error('Error marking profile as completed:', error);
+      return false;
+    }
+  }
+
+  // Check if profile is completed
+  async checkProfileCompletion(): Promise<boolean> {
+    if (!this.currentUser) return false;
+    
+    try {
+      const profile = await this.getUserProfile(this.currentUser.uid);
+      return profile?.profileCompleted || false;
+    } catch (error) {
+      console.error('Error checking profile completion:', error);
+      return false;
+    }
+  }
+
+  // Remove resume from profile
+async removeResumeFromProfile(): Promise<boolean> {
+  if (!this.currentUser) return false;
+  
+  try {
+    const docRef = doc(db, 'users', this.currentUser.uid);
+    const updates = {
+      profileCompleted: false,
+      resumeId: deleteField(),
+      lastResumeUpdate: new Date().toISOString()
+    };
+    
+    await setDoc(docRef, updates, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Error removing resume from profile:', error);
+    return false;
+  }
+}
+
   // Add auth state change listener
   onAuthStateChange(callback: (user: User | null, isNewSignUp?: boolean) => void): () => void {
     this.authStateCallbacks.push(callback);
@@ -176,6 +241,51 @@ class AuthService {
         this.authStateCallbacks.splice(index, 1);
       }
     };
+  }
+
+  // Get detailed user info including profile status
+  async getDetailedUserInfo(): Promise<{
+    user: User | null;
+    profile: UserProfile | null;
+    profileCompleted: boolean;
+  }> {
+    if (!this.currentUser) {
+      return {
+        user: null,
+        profile: null,
+        profileCompleted: false
+      };
+    }
+    
+    try {
+      const profile = await this.getUserProfile(this.currentUser.uid);
+      return {
+        user: this.currentUser,
+        profile,
+        profileCompleted: profile?.profileCompleted || false
+      };
+    } catch (error) {
+      console.error('Error getting detailed user info:', error);
+      return {
+        user: this.currentUser,
+        profile: null,
+        profileCompleted: false
+      };
+    }
+  }
+
+  // Validate user session
+  async validateSession(): Promise<boolean> {
+    if (!this.currentUser) return false;
+    
+    try {
+      // Try to get a fresh token to validate session
+      const token = await this.getIdToken();
+      return token !== null;
+    } catch (error) {
+      console.error('Session validation failed:', error);
+      return false;
+    }
   }
 
   // Get auth error message
@@ -193,7 +303,14 @@ class AuthService {
         return 'Invalid email address.';
       case 'auth/too-many-requests':
         return 'Too many failed attempts. Please try again later.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your connection.';
+      case 'auth/user-disabled':
+        return 'This account has been disabled.';
+      case 'auth/operation-not-allowed':
+        return 'Email/password accounts are not enabled.';
       default:
+        console.log('Unknown auth error:', errorCode);
         return 'An error occurred. Please try again.';
     }
   }

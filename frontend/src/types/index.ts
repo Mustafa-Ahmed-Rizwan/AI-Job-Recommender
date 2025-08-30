@@ -81,4 +81,5 @@ export interface APIResponse<T = any> {
   data?: T;
 }
 
-export type TabType = 'upload' | 'search' | 'analysis' | 'report';
+// Updated TabType to include profile
+export type TabType = 'profile' | 'search' | 'analysis' | 'report';

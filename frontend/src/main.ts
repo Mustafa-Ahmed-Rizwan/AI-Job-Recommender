@@ -9,11 +9,10 @@ import {
   downloadJSON,
   downloadCSV,
   generateCSVReport,
-  createReadableJobDescription,  // NEW
-  smartTruncate,                // NEW
-  formatJobDescription ,         // NEW
+  createReadableJobDescription,
+  smartTruncate,
+  formatJobDescription,
   truncateText
-
 } from './utils/helpers';
 import type { ResumeInfo, Job, JobAnalysis, OverallReport, TabType } from './types';
 import { authService } from './services/authService';
@@ -21,8 +20,8 @@ import { resumeService } from './services/resumeService';
 
 // Global application state
 class AppState {
-  currentTab: TabType = 'upload';
-  resumeProcessed: boolean = false;
+  currentTab: TabType = 'search';
+  profileCompleted: boolean = false;
   resumeInfo: ResumeInfo | null = null;
   resumeId: string | null = null;
   jobsFetched: boolean = false;
@@ -32,8 +31,8 @@ class AppState {
   overallReport: OverallReport | null = null;
 
   reset() {
-    this.currentTab = 'upload';
-    this.resumeProcessed = false;
+    this.currentTab = 'search';
+    this.profileCompleted = false;
     this.resumeInfo = null;
     this.resumeId = null;
     this.jobsFetched = false;
@@ -43,11 +42,9 @@ class AppState {
     this.overallReport = null;
   }
 }
-
 const appState = new AppState();
 
 // Utility functions
-
 const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
   const toast = document.createElement('div');
   toast.className = `toast ${type} slide-up`;
@@ -77,9 +74,453 @@ const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'suc
     toast.remove();
   }, 5000);
 };
+const showProfileCompletionModal = () => {
+  const modal = document.createElement('div');
+  modal.id = 'profile-completion-modal';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+  modal.innerHTML = `
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i data-lucide="user-plus" class="w-8 h-8 text-white"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Complete Your Profile</h2>
+        <p class="text-gray-600">Upload your resume to get started with personalized job recommendations</p>
+      </div>
+      
+      <div id="modal-upload-area" class="profile-upload-area">
+        <div class="space-y-4">
+          <div class="mx-auto w-12 h-12 text-gray-400">
+            <i data-lucide="upload" class="w-12 h-12"></i>
+          </div>
+          <div>
+            <p class="text-lg font-medium text-gray-900">Drop your resume here, or <span class="text-primary-600">browse</span></p>
+            <p class="text-sm text-gray-500 mt-1">Support for PDF and DOCX files up to 10MB</p>
+          </div>
+        </div>
+        <input type="file" id="modal-resume-input" accept=".pdf,.docx" class="hidden">
+      </div>
+      
+      <div id="modal-upload-progress" class="hidden mt-6">
+        <div class="flex items-center space-x-3">
+          <div class="w-6 h-6 loading-spinner">
+            <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+          </div>
+          <div class="flex-1">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-700">Processing resume...</span>
+              <span class="text-gray-500">Please wait</span>
+            </div>
+            <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6 text-center">
+        <button onclick="skipProfileCompletion()" class="text-sm text-gray-500 hover:text-gray-700">
+          Skip for now
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Setup modal upload handlers
+  setupModalUploadHandlers();
+  
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+};
+
+const setupModalUploadHandlers = () => {
+  const modalUploadArea = document.getElementById('modal-upload-area');
+  const modalResumeInput = document.getElementById('modal-resume-input') as HTMLInputElement;
+  
+  modalUploadArea?.addEventListener('click', () => modalResumeInput?.click());
+  modalUploadArea?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    modalUploadArea.classList.add('border-primary-400', 'bg-primary-50');
+  });
+  modalUploadArea?.addEventListener('dragleave', () => {
+    modalUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+  });
+  modalUploadArea?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    modalUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+    const file = e.dataTransfer?.files[0];
+    if (file) handleModalFileUpload(file);
+  });
+  
+  modalResumeInput?.addEventListener('change', (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) handleModalFileUpload(file);
+  });
+};
+
+const handleModalFileUpload = async (file: File) => {
+  if (!file) return;
+  
+  // Validate file type
+  const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  if (!allowedTypes.includes(file.type)) {
+    showToast('Please upload a PDF or DOCX file.', 'error');
+    return;
+  }
+  
+  // Validate file size (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('File size must be less than 10MB.', 'error');
+    return;
+  }
+  
+  const uploadArea = document.getElementById('modal-upload-area');
+  const uploadProgress = document.getElementById('modal-upload-progress');
+  
+  if (!uploadArea || !uploadProgress) return;
+  
+  try {
+    // Show progress
+    uploadArea.classList.add('hidden');
+    uploadProgress.classList.remove('hidden');
+    
+    // Animate progress bar
+    let progress = 0;
+    const progressBar = uploadProgress.querySelector('.progress-bar') as HTMLElement;
+    const progressInterval = setInterval(() => {
+      progress += Math.random() * 30;
+      if (progress > 90) progress = 90;
+      if (progressBar) progressBar.style.width = `${progress}%`;
+    }, 200);
+    
+    // Upload and process file
+    const result = await apiService.uploadResume(file);
+    
+    // Save to Firebase
+    const saveResult = await resumeService.saveResume(result.resume_info, file.name);
+    if (!saveResult.success) {
+      console.warn('Failed to save to Firebase:', saveResult.message);
+    }
+    
+    // Complete progress
+    clearInterval(progressInterval);
+    if (progressBar) progressBar.style.width = '100%';
+    
+    // Update state
+    appState.resumeInfo = result.resume_info;
+    appState.resumeId = result.resume_id;
+    appState.profileCompleted = true;
+    updateSuggestionsUI();
+    
+    // Close modal and proceed to main app
+    setTimeout(() => {
+      closeProfileCompletionModal();
+      showToast('Profile completed successfully!');
+      showTab('search');
+    }, 500);
+    
+  } catch (error: any) {
+    uploadProgress.classList.add('hidden');
+    uploadArea.classList.remove('hidden');
+    showToast(error.response?.data?.detail || 'Error processing resume. Please try again.', 'error');
+  }
+};
+
+const closeProfileCompletionModal = () => {
+  const modal = document.getElementById('profile-completion-modal');
+  modal?.remove();
+};
+
+const skipProfileCompletion = () => {
+  closeProfileCompletionModal();
+  showTab('search');
+  showToast('You can complete your profile later by clicking "View Profile"', 'warning');
+};
+const showProfilePage = async () => {
+  const modal = document.getElementById('profile-page-modal');
+  if (!modal) return;
+  
+  // Show modal
+  modal.classList.remove('hidden');
+  
+  // Load user profile data
+  await loadProfilePageData();
+  
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+};
+
+const loadProfilePageData = async () => {
+  const user = authService.getCurrentUser();
+  const userProfile = await authService.getUserProfile();
+  
+  // Load basic info
+  const basicInfo = document.getElementById('profile-basic-info');
+  if (basicInfo && user) {
+    basicInfo.innerHTML = `
+      <div class="flex items-center space-x-2">
+        <i data-lucide="mail" class="w-4 h-4 text-gray-500"></i>
+        <span><strong>Email:</strong> ${user.email}</span>
+      </div>
+      ${userProfile?.displayName ? `
+        <div class="flex items-center space-x-2">
+          <i data-lucide="user" class="w-4 h-4 text-gray-500"></i>
+          <span><strong>Name:</strong> ${userProfile.displayName}</span>
+        </div>
+      ` : ''}
+      <div class="flex items-center space-x-2">
+        <i data-lucide="calendar" class="w-4 h-4 text-gray-500"></i>
+        <span><strong>Member since:</strong> ${userProfile?.createdAt ? new Date(userProfile.createdAt).toLocaleDateString() : 'Unknown'}</span>
+      </div>
+    `;
+  }
+  
+  // Load resume data
+  const resumeResult = await resumeService.getActiveResume();
+  if (resumeResult.success && resumeResult.resume) {
+    showResumeInProfile(resumeResult.resume);
+  } else {
+    showNoResumeState();
+  }
+};
+
+const showResumeInProfile = (resumeRecord: any) => {
+  document.getElementById('no-resume-state')?.classList.add('hidden');
+  document.getElementById('resume-display')?.classList.remove('hidden');
+  
+  // Update file info
+  const filename = document.getElementById('resume-filename');
+  const uploadDate = document.getElementById('resume-upload-date');
+  
+  if (filename) filename.textContent = resumeRecord.filename;
+  if (uploadDate) {
+    uploadDate.textContent = `Uploaded on ${new Date(resumeRecord.uploadedAt).toLocaleDateString()}`;
+  }
+  
+  // Store resume data for details view
+  window.currentResumeData = resumeRecord.resumeInfo;
+};
+
+const showNoResumeState = () => {
+  document.getElementById('resume-display')?.classList.add('hidden');
+  document.getElementById('no-resume-state')?.classList.remove('hidden');
+};
+
+const toggleResumeDetails = () => {
+  const details = document.getElementById('resume-details');
+  const toggleText = document.getElementById('resume-toggle-text');
+  
+  if (!details || !toggleText) return;
+  
+  const isHidden = details.classList.contains('hidden');
+  
+  if (isHidden) {
+    details.classList.remove('hidden');
+    toggleText.textContent = 'Hide Details';
+    loadResumeDetails();
+  } else {
+    details.classList.add('hidden');
+    toggleText.textContent = 'View Details';
+  }
+};
+
+const loadResumeDetails = () => {
+  if (!window.currentResumeData) return;
+  
+  const resumeInfo = window.currentResumeData;
+  
+  // Contact info
+  const modalContactInfo = document.getElementById('modal-contact-info');
+  if (modalContactInfo) {
+    modalContactInfo.innerHTML = '';
+    if (resumeInfo.email) {
+      modalContactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="mail" class="w-4 h-4"></i><span>${resumeInfo.email}</span></div>`;
+    }
+    if (resumeInfo.phone) {
+      modalContactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="phone" class="w-4 h-4"></i><span>${resumeInfo.phone}</span></div>`;
+    }
+    if (!resumeInfo.email && !resumeInfo.phone) {
+      modalContactInfo.innerHTML = '<div class="text-gray-500 italic">No contact information found</div>';
+    }
+  }
+  
+  // Summary
+  const modalSummary = document.getElementById('modal-summary');
+  if (modalSummary) {
+    modalSummary.textContent = resumeInfo.summary || 'No summary available';
+  }
+  
+  // Skills
+  const modalSkills = document.getElementById('modal-skills');
+  if (modalSkills && resumeInfo.extracted_skills) {
+    modalSkills.innerHTML = resumeInfo.extracted_skills
+    .map((skill: string) => `<span class="skill-tag">${skill}</span>`)
+    .join('');
+  }
+  
+  // Sections
+  const sections = resumeInfo.sections || {};
+  const modalExperience = document.getElementById('modal-experience');
+  const modalEducation = document.getElementById('modal-education');
+  const modalProjects = document.getElementById('modal-projects');
+  
+  if (modalExperience) modalExperience.textContent = sections.experience || 'Not specified';
+  if (modalEducation) modalEducation.textContent = sections.education || 'Not specified';
+  if (modalProjects) modalProjects.textContent = sections.projects || 'Not specified';
+  
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+};
+
+const closeProfilePage = () => {
+  document.getElementById('profile-page-modal')?.classList.add('hidden');
+};
+
+const showFileUploadModal = () => {
+  const modal = document.getElementById('file-upload-modal');
+  if (!modal) return;
+  
+  modal.classList.remove('hidden');
+  setupUploadModalHandlers();
+  
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+};
+
+const closeFileUploadModal = () => {
+  document.getElementById('file-upload-modal')?.classList.add('hidden');
+};
+
+const setupUploadModalHandlers = () => {
+  const uploadArea = document.getElementById('upload-modal-area');
+  const fileInput = document.getElementById('upload-modal-input') as HTMLInputElement;
+  
+  uploadArea?.addEventListener('click', () => fileInput?.click());
+  uploadArea?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('border-primary-400', 'bg-primary-50');
+  });
+  uploadArea?.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+  });
+  uploadArea?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+    const file = e.dataTransfer?.files[0];
+    if (file) handleUploadModalFile(file);
+  });
+  
+  fileInput?.addEventListener('change', (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) handleUploadModalFile(file);
+  });
+};
+
+const handleUploadModalFile = async (file: File) => {
+  if (!file) return;
+  
+  // Validate file type
+  const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  if (!allowedTypes.includes(file.type)) {
+    showToast('Please upload a PDF or DOCX file.', 'error');
+    return;
+  }
+  
+  // Validate file size (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('File size must be less than 10MB.', 'error');
+    return;
+  }
+  
+  const uploadArea = document.getElementById('upload-modal-area');
+  const uploadProgress = document.getElementById('upload-modal-progress');
+  
+  if (!uploadArea || !uploadProgress) return;
+  
+  try {
+    // Show progress
+    uploadArea.classList.add('hidden');
+    uploadProgress.classList.remove('hidden');
+    
+    // Animate progress bar
+    let progress = 0;
+    const progressBar = uploadProgress.querySelector('.progress-bar') as HTMLElement;
+    const progressInterval = setInterval(() => {
+      progress += Math.random() * 30;
+      if (progress > 90) progress = 90;
+      if (progressBar) progressBar.style.width = `${progress}%`;
+    }, 200);
+    
+    // Upload and process file
+    const result = await apiService.uploadResume(file);
+    
+    // Replace existing resume
+    const saveResult = await resumeService.replaceResume(result.resume_info, file.name);
+    if (!saveResult.success) {
+      console.warn('Failed to save to Firebase:', saveResult.message);
+    }
+    
+    // Complete progress
+    clearInterval(progressInterval);
+    if (progressBar) progressBar.style.width = '100%';
+    
+    // Update state
+    appState.resumeInfo = result.resume_info;
+    appState.resumeId = result.resume_id;
+    appState.profileCompleted = true;
+    
+    // Close modal and refresh profile page
+    setTimeout(() => {
+      closeFileUploadModal();
+      loadProfilePageData();
+      showToast('Resume updated successfully!');
+    }, 500);
+    
+  } catch (error: any) {
+    uploadProgress.classList.add('hidden');
+    uploadArea.classList.remove('hidden');
+    showToast(error.response?.data?.detail || 'Error processing resume. Please try again.', 'error');
+  }
+};
+
+const deleteResumeFromProfile = async () => {
+  if (!appState.resumeId) {
+    showToast('No resume to delete.', 'error');
+    return;
+  }
+  
+  if (!confirm('Are you sure you want to delete your resume? You will need to upload a new one to continue using job recommendations.')) {
+    return;
+  }
+  
+  try {
+    const result = await resumeService.deleteResume(appState.resumeId);
+    if (result.success) {
+      // Reset state
+      appState.profileCompleted = false;
+      appState.resumeInfo = null;
+      appState.resumeId = null;
+      
+      // Update profile page display
+      showNoResumeState();
+      
+      showToast('Resume deleted successfully!');
+    } else {
+      showToast(result.message, 'error');
+    }
+  } catch (error) {
+    showToast('Error deleting resume. Please try again.', 'error');
+  }
+};
 
 const updateStepIndicator = (currentStep: TabType) => {
-  const steps = ['upload', 'search', 'analysis', 'report'];
+  const steps = ['search', 'analysis', 'report'];
   const currentIndex = steps.indexOf(currentStep);
   
   steps.forEach((step, index) => {
@@ -117,22 +558,30 @@ const showTab = (tabName: TabType) => {
   // Show current tab
   document.getElementById(`tab-${tabName}`)?.classList.remove('hidden');
   
+  // Update tab button states
+  document.querySelectorAll('.tab-nav-button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.getElementById(`tab-${tabName}-btn`)?.classList.add('active');
+  
   // Update state and step indicator
   appState.currentTab = tabName;
   updateStepIndicator(tabName);
 };
-// Add these authentication functions
+
+// Authentication functions
 const showAuthForms = () => {
   document.getElementById('auth-section')?.classList.remove('hidden');
   document.getElementById('main-app')?.classList.add('hidden');
-  
-  // Always show sign-in form by default and clear inputs
+  document.getElementById('view-profile-btn')?.style.setProperty('display', 'none');
   showSignInForm();
 };
 
 const showMainApp = () => {
   document.getElementById('auth-section')?.classList.add('hidden');
   document.getElementById('main-app')?.classList.remove('hidden');
+  // Show the view profile button
+  document.getElementById('view-profile-btn')?.style.setProperty('display', 'block');
   
   // Update user info display
   const user = authService.getCurrentUser();
@@ -140,21 +589,69 @@ const showMainApp = () => {
   if (user && userInfo) {
     userInfo.textContent = `Welcome, ${user.email}`;
   }
+  
+  checkFirstTimeUser();
 };
-// Add this helper function to completely clear all form inputs
+
+const checkFirstTimeUser = async () => {
+  try {
+    const userProfile = await authService.getUserProfile();
+    const latestResume = await resumeService.getLatestResume();
+    
+    if (!userProfile?.profileCompleted || !latestResume.success || !latestResume.resume) {
+      // Show profile completion modal for first-time users
+      showProfileCompletionModal();
+    } else {
+      // Existing user with completed profile
+      updateSuggestionsUI();
+      appState.profileCompleted = true;
+      if (latestResume.resume) {
+      appState.resumeInfo = latestResume.resume.resumeInfo;
+      appState.resumeId = latestResume.resume.id;
+    }
+      showTab('search');
+    }
+  } catch (error) {
+    console.error('Error checking first time user:', error);
+    showProfileCompletionModal();
+  }
+};
+
+const checkProfileCompletion = async () => {
+  try {
+    const latestResume = await resumeService.getLatestResume();
+    if (latestResume.success && latestResume.resume) {
+      // Profile is completed, load existing resume data
+      appState.profileCompleted = true;
+      appState.resumeInfo = latestResume.resume.resumeInfo;
+      appState.resumeId = latestResume.resume.id;
+      
+      // Display the resume in profile tab
+      displayExistingResume(latestResume.resume);
+      
+      // Start from search tab
+      showTab('search');
+    } else {
+      // Profile not completed, show profile tab
+      appState.profileCompleted = false;
+      showTab('profile');
+    }
+  } catch (error) {
+    console.error('Error checking profile completion:', error);
+    showTab('profile');
+  }
+};
+
+// Clear all auth forms
 const clearAllAuthForms = () => {
-  // Clear sign-in form
   const signinEmail = document.getElementById('signin-email') as HTMLInputElement;
   const signinPassword = document.getElementById('signin-password') as HTMLInputElement;
-  
-  if (signinEmail) signinEmail.value = '';
-  if (signinPassword) signinPassword.value = '';
-  
-  // Clear sign-up form
   const signupEmail = document.getElementById('signup-email') as HTMLInputElement;
   const signupPassword = document.getElementById('signup-password') as HTMLInputElement;
   const signupName = document.getElementById('signup-name') as HTMLInputElement;
   
+  if (signinEmail) signinEmail.value = '';
+  if (signinPassword) signinPassword.value = '';
   if (signupEmail) signupEmail.value = '';
   if (signupPassword) signupPassword.value = '';
   if (signupName) signupName.value = '';
@@ -174,10 +671,8 @@ const showSignUpForm = () => {
     signupForm.style.display = 'block';
   }
   
-  // Clear ALL form inputs when switching
   clearAllAuthForms();
   
-  // Focus on email input after clearing
   setTimeout(() => {
     const emailInput = document.getElementById('signup-email') as HTMLInputElement;
     if (emailInput) {
@@ -200,10 +695,8 @@ const showSignInForm = () => {
     signinForm.style.display = 'block';
   }
   
-  // Clear ALL form inputs when switching
   clearAllAuthForms();
   
-  // Focus on email input after clearing
   setTimeout(() => {
     const emailInput = document.getElementById('signin-email') as HTMLInputElement;
     if (emailInput) {
@@ -259,10 +752,9 @@ const handleSignUp = async (e: Event) => {
     
     if (result.success) {
       showToast('Account created successfully! Please sign in to continue.');
-      // Automatically switch to sign-in form after successful sign-up
       setTimeout(() => {
-      showSignInForm();
-    }, 100);
+        showSignInForm();
+      }, 100);
     } else {
       showToast(result.message, 'error');
     }
@@ -273,6 +765,7 @@ const handleSignUp = async (e: Event) => {
     signupForm?.classList.remove('hidden');
   }
 };
+
 const handleLogout = async () => {
   try {
     const result = await authService.logout();
@@ -286,6 +779,179 @@ const handleLogout = async () => {
     }
   } catch (error) {
     showToast('Logout failed. Please try again.', 'error');
+  }
+};
+
+// Profile Functions
+const handleProfileFileUpload = (file: File) => {
+  if (!file) return;
+  
+  // Validate file type
+  const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  if (!allowedTypes.includes(file.type)) {
+    showToast('Please upload a PDF or DOCX file.', 'error');
+    return;
+  }
+  
+  // Validate file size (10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('File size must be less than 10MB.', 'error');
+    return;
+  }
+  
+  uploadResumeToProfile(file);
+};
+
+const uploadResumeToProfile = async (file: File) => {
+  const uploadArea = document.getElementById('profile-upload-area');
+  const uploadProgress = document.getElementById('profile-upload-progress');
+  const profileInfo = document.getElementById('profile-info');
+  
+  if (!uploadArea || !uploadProgress) return;
+  
+  try {
+    // Show progress
+    uploadArea.classList.add('hidden');
+    uploadProgress.classList.remove('hidden');
+    
+    // Animate progress bar
+    let progress = 0;
+    const progressBar = uploadProgress.querySelector('.progress-bar') as HTMLElement;
+    const progressInterval = setInterval(() => {
+      progress += Math.random() * 30;
+      if (progress > 90) progress = 90;
+      if (progressBar) progressBar.style.width = `${progress}%`;
+    }, 200);
+    
+    // Upload and process file
+    const result = await apiService.uploadResume(file);
+    
+    // Save to Firebase
+    const saveResult = await resumeService.saveResume(result.resume_info, file.name);
+    if (!saveResult.success) {
+      console.warn('Failed to save to Firebase:', saveResult.message);
+    }
+    
+    // Complete progress
+    clearInterval(progressInterval);
+    if (progressBar) progressBar.style.width = '100%';
+    
+    // Update state
+    appState.resumeInfo = result.resume_info;
+    appState.resumeId = result.resume_id;
+    appState.profileCompleted = true;
+    
+    // Hide progress and show result
+    setTimeout(() => {
+      uploadProgress.classList.add('hidden');
+      displayProfileInfo(result.resume_info, file.name);
+      profileInfo?.classList.remove('hidden');
+      showToast('Profile completed successfully!');
+    }, 500);
+    
+  } catch (error: any) {
+    uploadProgress.classList.add('hidden');
+    uploadArea.classList.remove('hidden');
+    showToast(error.response?.data?.detail || 'Error processing resume. Please try again.', 'error');
+  }
+};
+
+const displayProfileInfo = (resumeInfo: ResumeInfo, fileName: string) => {
+  // Contact info
+  const contactInfo = document.getElementById('profile-contact-info');
+  if (contactInfo) {
+    contactInfo.innerHTML = '';
+    if (resumeInfo.email) {
+      contactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="mail" class="w-4 h-4"></i><span>${resumeInfo.email}</span></div>`;
+    }
+    if (resumeInfo.phone) {
+      contactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="phone" class="w-4 h-4"></i><span>${resumeInfo.phone}</span></div>`;
+    }
+  }
+  
+  // File name
+  const fileNameElement = document.getElementById('profile-file-name');
+  if (fileNameElement) {
+    fileNameElement.textContent = fileName;
+  }
+  
+  // Summary
+  const summaryElement = document.getElementById('profile-summary');
+  if (summaryElement) {
+    summaryElement.textContent = resumeInfo.summary || 'No summary available';
+  }
+  
+  // Skills
+  const skillsDisplay = document.getElementById('profile-skills-display');
+  if (skillsDisplay && resumeInfo.extracted_skills) {
+    skillsDisplay.innerHTML = resumeInfo.extracted_skills
+      .map((skill: string) => `<span class="skill-tag">${skill}</span>`)
+      .join('');
+  }
+  
+  // Sections
+  const sections = resumeInfo.sections || {};
+  ['experience', 'education', 'projects'].forEach(section => {
+    const contentElement = document.getElementById(`profile-${section}-content`);
+    if (contentElement) {
+      contentElement.textContent = sections[section as keyof typeof sections] || 'Not specified';
+    }
+  });
+  
+  // Show profile completed state
+  const uploadArea = document.getElementById('profile-upload-area');
+  const profileCompleted = document.getElementById('profile-completed');
+  uploadArea?.classList.add('hidden');
+  profileCompleted?.classList.remove('hidden');
+  
+  // Initialize lucide icons
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+};
+
+const displayExistingResume = (resumeRecord: any) => {
+  displayProfileInfo(resumeRecord.resumeInfo, resumeRecord.filename);
+  
+  // Update upload date
+  const uploadDate = document.getElementById('profile-upload-date');
+  if (uploadDate) {
+    const date = new Date(resumeRecord.uploadedAt).toLocaleDateString();
+    uploadDate.textContent = `Uploaded on ${date}`;
+  }
+};
+
+const removeResume = async () => {
+  if (!appState.resumeId) return;
+  
+  if (!confirm('Are you sure you want to remove your resume? You will need to upload a new one to continue using the service.')) {
+    return;
+  }
+  
+  try {
+    const result = await resumeService.deleteResume(appState.resumeId);
+    if (result.success) {
+      // Reset state
+      appState.profileCompleted = false;
+      appState.resumeInfo = null;
+      appState.resumeId = null;
+      
+      // Reset UI
+      const uploadArea = document.getElementById('profile-upload-area');
+      const profileCompleted = document.getElementById('profile-completed');
+      const profileInfo = document.getElementById('profile-info');
+      
+      uploadArea?.classList.remove('hidden');
+      profileCompleted?.classList.add('hidden');
+      profileInfo?.classList.add('hidden');
+      
+      showToast('Resume removed successfully!');
+      showTab('profile');
+    } else {
+      showToast(result.message, 'error');
+    }
+  } catch (error) {
+    showToast('Error removing resume. Please try again.', 'error');
   }
 };
 
@@ -313,121 +979,6 @@ const checkAPIStatus = async () => {
   }
 };
 
-// Resume Upload Functions
-const handleFileUpload = (file: File) => {
-  if (!file) return;
-  
-  // Validate file type
-  const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-  if (!allowedTypes.includes(file.type)) {
-    showToast('Please upload a PDF or DOCX file.', 'error');
-    return;
-  }
-  
-  // Validate file size (10MB)
-  if (file.size > 10 * 1024 * 1024) {
-    showToast('File size must be less than 10MB.', 'error');
-    return;
-  }
-  
-  uploadResume(file);
-};
-
-const uploadResume = async (file: File) => {
-  const uploadArea = document.getElementById('upload-area');
-  const uploadProgress = document.getElementById('upload-progress');
-  const resumeInfo = document.getElementById('resume-info');
-  
-  if (!uploadArea || !uploadProgress) return;
-  
-  try {
-    // Show progress
-    uploadArea.classList.add('hidden');
-    uploadProgress.classList.remove('hidden');
-    
-    // Animate progress bar
-    let progress = 0;
-    const progressBar = uploadProgress.querySelector('.progress-bar') as HTMLElement;
-    const progressInterval = setInterval(() => {
-      progress += Math.random() * 30;
-      if (progress > 90) progress = 90;
-      if (progressBar) progressBar.style.width = `${progress}%`;
-    }, 200);
-    
-    // Upload file
-    const result = await apiService.uploadResume(file);
-    // Save to Firebase
-    const saveResult = await resumeService.saveResume(result.resume_info, file.name);
-    if (!saveResult.success) {
-      console.warn('Failed to save to Firebase:', saveResult.message);
-    }
-    
-    // Complete progress
-    clearInterval(progressInterval);
-    if (progressBar) progressBar.style.width = '100%';
-    
-    // Update state
-    appState.resumeInfo = result.resume_info;
-    appState.resumeId = result.resume_id;
-    appState.resumeProcessed = true;
-    
-    // Hide progress and show result
-    setTimeout(() => {
-      uploadProgress.classList.add('hidden');
-      displayResumeInfo(result.resume_info);
-      resumeInfo?.classList.remove('hidden');
-      showToast('Resume processed successfully!');
-    }, 500);
-    
-  } catch (error: any) {
-    uploadProgress.classList.add('hidden');
-    uploadArea.classList.remove('hidden');
-    showToast(error.response?.data?.detail || 'Error processing resume. Please try again.', 'error');
-  }
-};
-
-const displayResumeInfo = (resumeInfo: ResumeInfo) => {
-  // Contact info
-  const contactInfo = document.getElementById('contact-info');
-  if (contactInfo) {
-    contactInfo.innerHTML = '';
-    if (resumeInfo.email) {
-      contactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="mail" class="w-4 h-4"></i><span>${resumeInfo.email}</span></div>`;
-    }
-    if (resumeInfo.phone) {
-      contactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="phone" class="w-4 h-4"></i><span>${resumeInfo.phone}</span></div>`;
-    }
-  }
-  
-  // Summary
-  const summaryElement = document.getElementById('resume-summary');
-  if (summaryElement) {
-    summaryElement.textContent = resumeInfo.summary || 'No summary available';
-  }
-  
-  // Skills
-  const skillsDisplay = document.getElementById('skills-display');
-  if (skillsDisplay && resumeInfo.extracted_skills) {
-    skillsDisplay.innerHTML = resumeInfo.extracted_skills
-      .map(skill => `<span class="skill-tag">${skill}</span>`)
-      .join('');
-  }
-  
-  // Sections
-  const sections = resumeInfo.sections || {};
-  ['experience', 'education', 'projects'].forEach(section => {
-    const contentElement = document.getElementById(`${section}-content`);
-    if (contentElement) {
-      contentElement.textContent = sections[section as keyof typeof sections] || 'Not specified';
-    }
-  });
-  
-  // Initialize lucide icons
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
-};
-
 // Job Search Functions
 const searchJobs = async () => {
   const jobQuery = (document.getElementById('job-query') as HTMLInputElement)?.value?.trim();
@@ -438,6 +989,11 @@ const searchJobs = async () => {
   
   if (!jobQuery) {
     showToast('Please enter a job title or keywords.', 'error');
+    return;
+  }
+  
+  if (!appState.profileCompleted) {
+    showToast('Please complete your profile first.', 'warning');
     return;
   }
   
@@ -511,14 +1067,12 @@ const displayJobs = (jobs: Job[]) => {
                       similarityScore > 0.6 ? 'match-good' : 'match-potential';
     const matchLabel = getMatchLabel(similarityScore);
     
-    // Format the job description
     const formattedDescription = job.description ? createReadableJobDescription(job.description) : '';
     const previewDescription = job.description ? smartTruncate(job.description, 180) : '';
     
     return `
       <div class="job-card">
         <div class="flex flex-col gap-4">
-          <!-- Job Header -->
           <div class="flex items-start justify-between">
             <div class="flex-1">
               <h3 class="text-lg font-semibold text-gray-900 mb-2">${job.title || 'Unknown Title'}</h3>
@@ -546,7 +1100,6 @@ const displayJobs = (jobs: Job[]) => {
             </div>
           </div>
           
-          <!-- Job Description -->
           ${job.description ? `
             <div class="job-description-container">
               <div class="job-description-preview" id="job-preview-${index}">
@@ -570,7 +1123,6 @@ const displayJobs = (jobs: Job[]) => {
             </div>
           `}
           
-          <!-- Apply Button -->
           <div class="flex justify-end pt-2 border-t border-gray-100">
             ${job.apply_link && job.apply_link.startsWith('http') ? `
               <a href="${job.apply_link}" target="_blank" rel="noopener noreferrer" 
@@ -594,29 +1146,29 @@ const displayJobs = (jobs: Job[]) => {
     window.lucide.createIcons();
   }
 };
-// Add this function
+
 const getSuggestions = async () => {
   if (!appState.resumeInfo) {
-    showToast('Please upload your resume first.', 'warning');
+    showToast('Please complete your profile first.', 'warning');
+    showProfilePage();
     return;
   }
   
   const suggestionsLoading = document.getElementById('suggestions-loading');
   const suggestionsContent = document.getElementById('suggestions-content');
   const getSuggestionsBtn = document.getElementById('get-suggestions-btn');
+  const noProfileSuggestions = document.getElementById('no-profile-suggestions');
   
   try {
-    // Show loading
     getSuggestionsBtn?.setAttribute('disabled', 'true');
+    noProfileSuggestions?.classList.add('hidden');
     suggestionsLoading?.classList.remove('hidden');
     suggestionsContent?.classList.add('hidden');
     
     const result = await apiService.getSuggestedJobs(appState.resumeInfo);
     
-    // Display suggestions
     displaySuggestions(result.suggestions);
     
-    // Show content
     suggestionsLoading?.classList.add('hidden');
     suggestionsContent?.classList.remove('hidden');
     
@@ -624,9 +1176,24 @@ const getSuggestions = async () => {
     
   } catch (error: any) {
     suggestionsLoading?.classList.add('hidden');
+    noProfileSuggestions?.classList.remove('hidden');
     showToast(error.response?.data?.detail || 'Error getting suggestions', 'error');
   } finally {
     getSuggestionsBtn?.removeAttribute('disabled');
+  }
+};
+const updateSuggestionsUI = () => {
+  const getSuggestionsBtn = document.getElementById('get-suggestions-btn');
+  const noProfileSuggestions = document.getElementById('no-profile-suggestions');
+  const suggestionsContent = document.getElementById('suggestions-content');
+  
+  if (appState.profileCompleted && appState.resumeInfo) {
+    getSuggestionsBtn?.removeAttribute('disabled');
+    noProfileSuggestions?.classList.add('hidden');
+  } else {
+    getSuggestionsBtn?.setAttribute('disabled', 'true');
+    noProfileSuggestions?.classList.remove('hidden');
+    suggestionsContent?.classList.add('hidden');
   }
 };
 
@@ -649,7 +1216,6 @@ const displaySuggestions = (suggestions: string[]) => {
     </button>
   `).join('');
   
-  // Initialize lucide icons
   if (window.lucide) {
     window.lucide.createIcons();
   }
@@ -674,11 +1240,9 @@ const startAnalysis = async () => {
   const analysisResults = document.getElementById('analysis-results');
   
   try {
-    // Show loading
     analysisLoading?.classList.remove('hidden');
     analysisResults?.classList.add('hidden');
     
-    // Animate progress
     const progressBar = document.getElementById('analysis-progress');
     let progress = 0;
     const progressInterval = setInterval(() => {
@@ -687,18 +1251,14 @@ const startAnalysis = async () => {
       if (progressBar) progressBar.style.width = `${progress}%`;
     }, 500);
     
-    // Analyze top 5 jobs
     const jobsToAnalyze = appState.jobsData.slice(0, 5);
     const result = await apiService.analyzeSkills(appState.resumeId, jobsToAnalyze);
     
-    // Complete progress
     clearInterval(progressInterval);
     if (progressBar) progressBar.style.width = '100%';
     
-    // Update state
     appState.jobAnalyses = result.analyses;
     
-    // Display results
     setTimeout(() => {
       analysisLoading?.classList.add('hidden');
       displayAnalysisResults(result.analyses);
@@ -718,7 +1278,6 @@ const displayAnalysisResults = (analyses: JobAnalysis[]) => {
   
   if (!analysisTabsContainer || !analysisContent || !analyses.length) return;
   
-  // Create tabs
   const tabs = analyses.map((analysis, index) => {
     const jobTitle = analysis.job_info?.title || `Job ${index + 1}`;
     const truncatedTitle = truncateText(jobTitle, 25);
@@ -841,7 +1400,7 @@ const showAnalysisTab = (index: number) => {
             ${(recommendations.priority_skills_to_learn || []).length > 0 ? 
               recommendations.priority_skills_to_learn.map((skill, idx) => `
                 <div class="flex items-center space-x-3 p-3 bg-primary-50 rounded-lg">
-                  <div class="w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-bold">${idx + 1}</div>
+                  <div class="w-6 h-6 bg-primary-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">${idx + 1}</div>
                   <span class="text-sm font-medium text-gray-800">${skill}</span>
                 </div>
               `).join('') : 
@@ -967,7 +1526,6 @@ const showAnalysisTab = (index: number) => {
     </div>
   `;
   
-  // Initialize lucide icons
   if (window.lucide) {
     window.lucide.createIcons();
   }
@@ -984,20 +1542,15 @@ const generateReport = async () => {
   const reportContent = document.getElementById('report-content');
   
   try {
-    // Show loading
     reportLoading?.classList.remove('hidden');
     reportContent?.classList.add('hidden');
     
-    // Generate report
     const result = await apiService.generateReport(appState.jobAnalyses);
     
-    // Update state
     appState.overallReport = result.report;
     
-    // Display report
     displayReport(result.report);
     
-    // Show content
     reportLoading?.classList.add('hidden');
     reportContent?.classList.remove('hidden');
     
@@ -1144,12 +1697,10 @@ const toggleJobDescription = (jobIndex: number) => {
   const isExpanded = !fullElement.classList.contains('hidden');
   
   if (isExpanded) {
-    // Collapse - show preview, hide full description
     previewElement.classList.remove('hidden');
     fullElement.classList.add('hidden');
     toggleButton.textContent = 'Read more';
   } else {
-    // Expand - hide preview, show full description
     previewElement.classList.add('hidden');
     fullElement.classList.remove('hidden');
     toggleButton.textContent = 'Read less';
@@ -1221,63 +1772,69 @@ const printReport = () => {
 
 // Initialize Application
 const initializeApp = () => {
-  // Check authentication state with updated callback
   authService.onAuthStateChange((user, isNewSignUp) => {
     if (user && !isNewSignUp) {
-      // Only show main app if user is signed in (not just signed up)
       console.log('User signed in:', user.email);
       showMainApp();
     } else if (!user) {
       console.log('User signed out');
       showAuthForms();
     }
-    // If isNewSignUp is true, we stay on the auth forms (sign-in form)
   });
   
-  // Check API status
   checkAPIStatus();
+  updateStepIndicator('search');
   
-  // Initialize step indicator
-  updateStepIndicator('upload');
-  
-  // Initialize Lucide icons
   if (window.lucide) {
     window.lucide.createIcons();
   }
   
-  // Setup event listeners
   setupEventListeners();
 };
 
 const setupEventListeners = () => {
-   // Auth form listeners
+  // Add these to the existing setupEventListeners function:
+
+// Profile page listeners
+  document.getElementById('view-profile-btn')?.addEventListener('click', showProfilePage);
+  document.getElementById('close-profile-modal')?.addEventListener('click', closeProfilePage);
+  document.getElementById('upload-resume-btn')?.addEventListener('click', showFileUploadModal);
+  document.getElementById('reupload-resume-btn')?.addEventListener('click', showFileUploadModal);
+  document.getElementById('delete-resume-btn')?.addEventListener('click', deleteResumeFromProfile);
+  document.getElementById('close-upload-modal')?.addEventListener('click', closeFileUploadModal);
+
+  
+ 
+  // Auth form listeners
   document.getElementById('signin-form-element')?.addEventListener('submit', handleSignIn);
   document.getElementById('signup-form-element')?.addEventListener('submit', handleSignUp);
   document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
-  // File upload
-  const uploadArea = document.getElementById('upload-area');
-  const resumeInput = document.getElementById('resume-input') as HTMLInputElement;
   
-  uploadArea?.addEventListener('click', () => resumeInput?.click());
-  uploadArea?.addEventListener('dragover', (e) => {
+  // Profile file upload
+  const profileUploadArea = document.getElementById('profile-upload-area');
+  const profileResumeInput = document.getElementById('profile-resume-input') as HTMLInputElement;
+  
+  profileUploadArea?.addEventListener('click', () => profileResumeInput?.click());
+  profileUploadArea?.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadArea.classList.add('border-primary-400', 'bg-primary-50');
+    profileUploadArea.classList.add('border-primary-400', 'bg-primary-50');
   });
-  uploadArea?.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+  profileUploadArea?.addEventListener('dragleave', () => {
+    profileUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
   });
-  uploadArea?.addEventListener('drop', (e) => {
+  profileUploadArea?.addEventListener('drop', (e) => {
     e.preventDefault();
-    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+    profileUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
     const file = e.dataTransfer?.files[0];
-    if (file) handleFileUpload(file);
+    if (file) handleProfileFileUpload(file);
   });
   
-  resumeInput?.addEventListener('change', (e) => {
+  profileResumeInput?.addEventListener('change', (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) handleFileUpload(file);
+    if (file) handleProfileFileUpload(file);
   });
   
+  // Country/city selection
   document.getElementById('country-select')?.addEventListener('change', async (e) => {
     const country = (e.target as HTMLSelectElement).value;
     const citySelect = document.getElementById('city-select') as HTMLSelectElement;
@@ -1301,15 +1858,14 @@ const setupEventListeners = () => {
       showToast('Error loading cities', 'error');
     }
   });
-  // Add in setupEventListeners function
-  document.getElementById('get-suggestions-btn')?.addEventListener('click', getSuggestions);
   
-  // Navigation buttons
+  // Action buttons
+  document.getElementById('get-suggestions-btn')?.addEventListener('click', getSuggestions);
   document.getElementById('continue-to-search')?.addEventListener('click', () => {
-    if (appState.resumeProcessed) {
+    if (appState.profileCompleted) {
       showTab('search');
     } else {
-      showToast('Please upload your resume first.', 'warning');
+      showToast('Please complete your profile first.', 'warning');
     }
   });
   
@@ -1330,9 +1886,9 @@ const setupEventListeners = () => {
     }
   });
   
-  // Action buttons
   document.getElementById('search-jobs-btn')?.addEventListener('click', searchJobs);
   document.getElementById('start-analysis-btn')?.addEventListener('click', startAnalysis);
+  document.getElementById('remove-resume-btn')?.addEventListener('click', removeResume);
   
   // Sort dropdown
   document.getElementById('sort-jobs')?.addEventListener('change', (e) => {
@@ -1340,6 +1896,9 @@ const setupEventListeners = () => {
     sortJobs(criteria);
   });
   
+  // Export buttons
+  document.getElementById('export-json')?.addEventListener('click', () => exportReport('json'));
+  document.getElementById('export-csv')?.addEventListener('click', () => exportReport('csv'));
   document.getElementById('print-report')?.addEventListener('click', printReport);
   
   // Reset button
@@ -1355,6 +1914,25 @@ const setupEventListeners = () => {
       searchJobs();
     }
   });
+  
+  // Tab navigation
+  
+  document.getElementById('tab-search-btn')?.addEventListener('click', () => showTab('search'));
+document.getElementById('tab-analysis-btn')?.addEventListener('click', () => {
+  if (appState.jobsFetched) {
+    showTab('analysis');
+  } else {
+    showToast('Please search for jobs first.', 'warning');
+    return;
+  }
+});
+  document.getElementById('tab-report-btn')?.addEventListener('click', () => {
+    if (appState.jobAnalyses.length) {
+      showTab('report');
+    } else {
+      showToast('Please complete the analysis first.', 'warning');
+    }
+  });
 };
 
 const resetApplication = () => {
@@ -1362,23 +1940,26 @@ const resetApplication = () => {
   appState.reset();
   
   // Reset UI
-  showTab('upload');
+  showTab('search');
   
   // Clear content
-  document.getElementById('resume-info')?.classList.add('hidden');
+  document.getElementById('profile-info')?.classList.add('hidden');
+  document.getElementById('profile-completed')?.classList.add('hidden');
   document.getElementById('job-results')?.classList.add('hidden');
   document.getElementById('analysis-results')?.classList.add('hidden');
   document.getElementById('report-content')?.classList.add('hidden');
   
-  // Reset upload area
-  const uploadArea = document.getElementById('upload-area');
-  const uploadProgress = document.getElementById('upload-progress');
+  // Reset profile upload area
+  const uploadArea = document.getElementById('profile-upload-area');
+  const uploadProgress = document.getElementById('profile-upload-progress');
   uploadArea?.classList.remove('hidden');
   uploadProgress?.classList.add('hidden');
   
   // Clear form inputs
-  (document.getElementById('job-query') as HTMLInputElement).value = '';
-  (document.getElementById('location') as HTMLInputElement).value = 'Pakistan';
+  const jobQueryInput = document.getElementById('job-query') as HTMLInputElement;
+  const countrySelect = document.getElementById('country-select') as HTMLSelectElement;
+  if (jobQueryInput) jobQueryInput.value = '';
+  if (countrySelect) countrySelect.value = 'Pakistan';
   
   showToast('Application reset successfully!');
 };
@@ -1391,9 +1972,12 @@ declare global {
     showAnalysisTab: typeof showAnalysisTab;
     updateSkillProgress: typeof updateSkillProgress;
     searchWithSuggestion: typeof searchWithSuggestion;
-    showSignUpForm:typeof showSignUpForm;
-    showSignInForm:typeof showSignInForm;
-
+    showSignUpForm: typeof showSignUpForm;
+    showSignInForm: typeof showSignInForm;
+    removeResume: typeof removeResume;
+    skipProfileCompletion: typeof skipProfileCompletion;
+    toggleResumeDetails: typeof toggleResumeDetails;
+    currentResumeData: any;
     lucide: any;
   }
 }
@@ -1405,6 +1989,9 @@ window.showAnalysisTab = showAnalysisTab;
 window.updateSkillProgress = updateSkillProgress;
 window.showSignUpForm = showSignUpForm;
 window.showSignInForm = showSignInForm;
+window.removeResume = removeResume;
+window.skipProfileCompletion = skipProfileCompletion;
+window.toggleResumeDetails = toggleResumeDetails;
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
