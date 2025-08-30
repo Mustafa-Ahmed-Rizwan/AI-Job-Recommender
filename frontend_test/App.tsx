@@ -54,30 +54,32 @@ export default function App() {
 
   useEffect(() => {
     // Listen to authentication state changes
-    const unsubscribe = authService.onAuthStateChange(async (user) => {
-      console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
-      setUser(user);
-      
-      if (user) {
-        // Check if profile is completed when user signs in
-        setProfileLoading(true);
-        try {
-          const hasCompleted = await authService.hasCompletedProfile();
-          console.log('Profile completed:', hasCompleted);
-          setProfileCompleted(hasCompleted);
-        } catch (error) {
-          console.error('Error checking profile completion:', error);
-          setProfileCompleted(false);
-        } finally {
-          setProfileLoading(false);
-        }
-      } else {
-        setProfileCompleted(false);
-        setProfileLoading(false);
-      }
-      
-      setAuthLoading(false);
-    });
+    // In the auth state change listener, add better error handling:
+const unsubscribe = authService.onAuthStateChange(async (user) => {
+  console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
+  setUser(user);
+  
+  if (user) {
+    setProfileLoading(true);
+    try {
+      // Add a small delay to ensure Firestore sync
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const hasCompleted = await authService.hasCompletedProfile();
+      console.log('Profile completed:', hasCompleted);
+      setProfileCompleted(hasCompleted);
+    } catch (error) {
+      console.error('Error checking profile completion:', error);
+      setProfileCompleted(false);
+    } finally {
+      setProfileLoading(false);
+    }
+  } else {
+    setProfileCompleted(false);
+    setProfileLoading(false);
+  }
+  
+  setAuthLoading(false);
+});
 
     return unsubscribe;
   }, []);

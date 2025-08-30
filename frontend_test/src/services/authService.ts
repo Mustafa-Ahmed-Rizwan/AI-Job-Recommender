@@ -17,8 +17,12 @@ class AuthService {
   constructor() {
     // Listen to auth state changes
     onAuthStateChanged(auth, (user) => {
+      console.log('Firebase auth state changed:', user ? user.uid : 'No user'); // Debug log
       this.currentUser = user;
-      this.authStateCallbacks.forEach(callback => callback(user));
+      this.authStateCallbacks.forEach(callback => {
+        console.log('Calling auth state callback'); // Debug log
+        callback(user);
+      });
       
       // Load user data when authenticated
       if (user) {
@@ -79,14 +83,35 @@ class AuthService {
   }
 
   // Check if user has completed profile (uploaded resume)
-  async hasCompletedProfile(): Promise<boolean> {
-    try {
-      const resumeId = await AsyncStorage.getItem('resume_id');
-      return resumeId !== null;
-    } catch {
-      return false;
+  // Replace the hasCompletedProfile method in authService.ts:
+async hasCompletedProfile(): Promise<boolean> {
+  try {
+    // First check if we have a current user
+    if (!this.currentUser) return false;
+    
+    // Get profile from Firestore (source of truth)
+    const userProfile = await this.getUserProfile(this.currentUser.uid);
+    
+    if (userProfile) {
+      // Check if profile is marked as completed AND has resume data
+      const hasResume = Boolean(userProfile.resumeId && userProfile.resumeInfo);
+      const profileCompleted = userProfile.profileCompleted === true;
+      
+      // Update local storage to match backend state
+      if (hasResume && profileCompleted && userProfile.resumeId && userProfile.resumeInfo) {
+        await AsyncStorage.setItem('resume_id', userProfile.resumeId);
+        await AsyncStorage.setItem('resume_info', JSON.stringify(userProfile.resumeInfo));
+      }
+      
+      return hasResume && profileCompleted;
     }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking profile completion:', error);
+    return false;
   }
+}
 
   // Get ID token for API requests
   async getIdToken(): Promise<string | null> {
@@ -122,53 +147,60 @@ class AuthService {
   }
 
   // Sign up with email and password
-  async signUp(email: string, password: string, displayName?: string): Promise<{ success: boolean; message: string; user?: User }> {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Create user profile in Firestore
-      const userProfile: UserProfile = {
-        uid: user.uid,
-        email: user.email!,
-        displayName: displayName || '',
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        profileCompleted: false,
-        resumeId: null,
-        resumeInfo: null
-      };
-      
-      await setDoc(doc(db, 'users', user.uid), userProfile);
-      
-      return {
-        success: true,
-        message: 'Account created successfully',
-        user
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: this.getAuthErrorMessage(error.code)
-      };
-    }
+// In the signUp method, ensure immediate sign out:
+async signUp(email: string, password: string, displayName?: string): Promise<{ success: boolean; message: string; user?: User }> {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    // Create user profile in Firestore
+    const userProfile: UserProfile = {
+      uid: user.uid,
+      email: user.email!,
+      displayName: displayName || '',
+      createdAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString(),
+      profileCompleted: false,
+      resumeId: null,
+      resumeInfo: null
+    };
+    
+    await setDoc(doc(db, 'users', user.uid), userProfile);
+    
+    // Immediately sign out to prevent brief app access
+    await signOut(auth);
+    
+    return {
+      success: true,
+      message: 'Account created successfully. Please sign in.'
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: this.getAuthErrorMessage(error.code)
+    };
   }
+}
 
   // Sign out
-  async logout(): Promise<{ success: boolean; message: string }> {
-    try {
-      await signOut(auth);
-      return {
-        success: true,
-        message: 'Signed out successfully'
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: 'Error signing out'
-      };
-    }
+ // Sign out
+async logout(): Promise<{ success: boolean; message: string }> {
+  try {
+    console.log('Signing out user:', this.currentUser?.uid); // Debug log
+    await signOut(auth);
+    console.log('Firebase signOut completed'); // Debug log
+    return {
+      success: true,
+      message: 'Signed out successfully'
+    };
+  } catch (error: any) {
+    console.error('Logout error:', error); // Debug log
+    return {
+      success: false,
+      message: 'Error signing out'
+    };
   }
+}
 
   // Get user profile from Firestore
   async getUserProfile(uid: string): Promise<UserProfile | null> {

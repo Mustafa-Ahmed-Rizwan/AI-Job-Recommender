@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, typography, spacing, borderRadius } from '../config/theme';
 import { authService } from '../services/authService';
 import { UserProfile } from '../types';
+import { TouchableOpacity } from 'react-native';
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -114,25 +115,33 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Confirm Logout',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
+  const handleLogout = () => {
+  console.log('handleLogout called'); // Add this debug log
+  Alert.alert(
+    'Confirm Logout',
+    'Are you sure you want to sign out?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          console.log('Sign out confirmed'); // Add this debug log
+          try {
             const result = await authService.logout();
+            console.log('Logout result:', result);
             if (!result.success) {
               Alert.alert('Error', result.message);
             }
-          },
+          } catch (error) {
+            console.error('Logout error:', error);
+            Alert.alert('Error', 'Failed to sign out');
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
 
   if (!user) {
     return (
@@ -167,6 +176,7 @@ export default function ProfileScreen() {
                 <Button
                   mode="outlined"
                   onPress={() => {
+
                     setEditing(false);
                     setEditForm({
                       displayName: user.displayName || '',
@@ -415,8 +425,9 @@ const styles = StyleSheet.create({
     color: colors.red[800],
   },
   logoutButton: {
-    borderColor: colors.red[600],
-  },
+  borderColor: colors.red[600],
+  marginTop: spacing.sm,
+},
   footer: {
     alignItems: 'center',
     paddingVertical: spacing.xl,

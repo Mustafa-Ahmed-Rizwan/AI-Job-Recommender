@@ -170,9 +170,14 @@ export default function SearchScreen() {
           if (similarJobsResult && similarJobsResult.similar_jobs && similarJobsResult.similar_jobs.length > 0) {
             // Merge original jobs with similarity scores
             const jobsWithScores = searchResult.jobs.map(job => {
-              const similarJob = similarJobsResult.similar_jobs.find(
-                simJob => simJob.title === job.title && simJob.company_name === job.company_name
-              );
+              const similarJob = similarJobsResult.similar_jobs.find(simJob => {
+                const titleMatch = simJob.title?.toLowerCase().trim() === job.title?.toLowerCase().trim();
+                const companyMatch = (simJob.company_name?.toLowerCase().trim() === job.company_name?.toLowerCase().trim()) ||
+                                    (simJob.company?.toLowerCase().trim() === job.company?.toLowerCase().trim()) ||
+                                    (simJob.company_name?.toLowerCase().trim() === job.company?.toLowerCase().trim()) ||
+                                    (simJob.company?.toLowerCase().trim() === job.company_name?.toLowerCase().trim());
+                return titleMatch && companyMatch;
+});
               return {
                 ...job,
                 similarity_score: similarJob?.similarity_score || 0
@@ -216,21 +221,24 @@ export default function SearchScreen() {
   };
 
   const getMatchColor = (score: number) => {
-    if (score >= 0.8) return colors.green[600];
-    if (score >= 0.6) return colors.yellow[600];
-    return colors.blue[600];
-  };
+  // Convert to 0-1 range if it's a percentage
+  const normalizedScore = score > 1 ? score / 100 : score;
+  if (normalizedScore >= 0.8) return colors.green[600];
+  if (normalizedScore >= 0.6) return colors.yellow[600];
+  return colors.blue[600];
+};
 
-  const getMatchLabel = (score: number) => {
-    if (score >= 0.8) return 'Excellent Match';
-    if (score >= 0.6) return 'Good Match';
-    return 'Potential Match';
-  };
+const getMatchLabel = (score: number) => {
+  const normalizedScore = score > 1 ? score / 100 : score;
+  if (normalizedScore >= 0.8) return 'Excellent Match';
+  if (normalizedScore >= 0.6) return 'Good Match';
+  return 'Potential Match';
+};
 
   const renderJobCard = (job: Job, index: number) => {
-    const similarityScore = parseFloat(String(job.similarity_score || 0));
+    const similarityScore = job.similarity_score ? parseFloat(String(job.similarity_score)) : 0;
     const matchColor = getMatchColor(similarityScore);
-    const hasScore = job.similarity_score !== undefined && job.similarity_score > 0;
+    const hasScore = job.similarity_score !== undefined && job.similarity_score !== null && job.similarity_score >= 0;
 
     return (
       <Card key={index} style={styles.jobCard}>

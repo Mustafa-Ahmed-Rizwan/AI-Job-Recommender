@@ -52,11 +52,21 @@ export default function AuthScreen() {
         result = await authService.signIn(formData.email, formData.password);
       }
 
+      // In the handleSubmit function, modify the sign-up success handling:
       if (result.success) {
-        Alert.alert('Success', result.message);
-        // Clear form
-        setFormData({ email: '', password: '', displayName: '' });
-      } else {
+        if (isSignUp) {
+          // Don't show success alert immediately, just switch to sign in
+          setIsSignUp(false);
+          setFormData({ email: formData.email, password: '', displayName: '' });
+          // Show alert after state is updated
+          setTimeout(() => {
+            Alert.alert('Success', 'Account created successfully! Please sign in with your credentials.');
+          }, 100);
+        } else {
+          // For sign in, navigation will happen automatically via auth state change
+          // Don't show alert here to avoid confusion
+        }
+      }else {
         Alert.alert('Error', result.message);
       }
     } catch (error) {
