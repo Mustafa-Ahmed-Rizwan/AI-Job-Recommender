@@ -9,10 +9,13 @@ import {
 import { showToast } from './UIHelpers';
 import { appState } from './AppState';
 import type { Job } from '../types';
+import { showErrorMessage, showSuccessMessage } from './ErrorManager';
+export { showErrorMessage, showSuccessMessage } from './ErrorManager';
 
 export const getSuggestions = async () => {
-  if (!appState.resumeInfo) {
-    showToast('Please complete your profile first.', 'warning');
+  // Check if profile is completed first
+  if (!appState.profileCompleted || !appState.resumeInfo) {
+    showErrorMessage('Please upload your resume first to get AI job suggestions.');
     return;
   }
   
@@ -22,35 +25,59 @@ export const getSuggestions = async () => {
   const noProfileSuggestions = document.getElementById('no-profile-suggestions');
   
   try {
-    getSuggestionsBtn?.setAttribute('disabled', 'true');
+    // Disable button and show loading
+    if (getSuggestionsBtn) {
+      getSuggestionsBtn.setAttribute('disabled', 'true');
+      getSuggestionsBtn.classList.add('opacity-50');
+    }
+    
     noProfileSuggestions?.classList.add('hidden');
     suggestionsLoading?.classList.remove('hidden');
     suggestionsContent?.classList.add('hidden');
     
+    // Use resumeInfo directly for suggestions
     const result = await apiService.getSuggestedJobs(appState.resumeInfo);
+    
+    if (!result?.suggestions?.length) {
+      throw new Error('No job suggestions could be generated. Please try again.');
+    }
     
     displaySuggestions(result.suggestions);
     
     suggestionsLoading?.classList.add('hidden');
     suggestionsContent?.classList.remove('hidden');
     
-    showToast('Job suggestions generated!');
+    showSuccessMessage('AI job suggestions generated successfully!');
     
   } catch (error: any) {
+    console.error('Suggestions error:', error);
+    
     suggestionsLoading?.classList.add('hidden');
     noProfileSuggestions?.classList.remove('hidden');
-    showToast(error.response?.data?.detail || 'Error getting suggestions', 'error');
+    
+    const errorMessage = error.response?.data?.detail || 
+                        error.message || 
+                        'Unable to generate suggestions. Please check your internet connection and try again.';
+    
+    showErrorMessage(errorMessage);
   } finally {
-    getSuggestionsBtn?.removeAttribute('disabled');
+    // Re-enable button
+    if (getSuggestionsBtn) {
+      getSuggestionsBtn.removeAttribute('disabled');
+      getSuggestionsBtn.classList.remove('opacity-50');
+    }
   }
 };
 
 const displaySuggestions = (suggestions: string[]) => {
   const suggestionsGrid = document.getElementById('suggestions-grid');
-  if (!suggestionsGrid || !suggestions.length) return;
+  if (!suggestionsGrid || !suggestions.length) {
+    showToast('No suggestions to display.', 'warning');
+    return;
+  }
   
   suggestionsGrid.innerHTML = suggestions.map(suggestion => `
-    <button onclick="searchWithSuggestion('${suggestion}')" 
+    <button onclick="searchWithSuggestion('${suggestion.replace(/'/g, "\\\'")}')" 
             class="group p-4 bg-white rounded-lg border border-blue-200 hover:border-blue-400 hover:shadow-md transition-all duration-200 text-left">
       <div class="flex items-center space-x-3">
         <div class="w-8 h-8 bg-blue-100 group-hover:bg-blue-200 rounded-lg flex items-center justify-center transition-colors">
@@ -85,12 +112,12 @@ export const searchJobs = async () => {
   const numJobs = parseInt((document.getElementById('num-jobs') as HTMLSelectElement)?.value || '20');
   
   if (!jobQuery) {
-    showToast('Please enter a job title or keywords.', 'error');
+    showToast('Please enter a job title or keywords to search.', 'error');
     return;
   }
   
-  if (!appState.profileCompleted) {
-    showToast('Please complete your profile first.', 'warning');
+  if (!appState.profileCompleted || !appState.resumeInfo) {
+    showToast('Please complete your profile first by uploading a resume.', 'warning');
     return;
   }
   
@@ -103,7 +130,7 @@ export const searchJobs = async () => {
     
     const searchResult = await apiService.searchJobs(jobQuery, location, numJobs);
     
-    if (!searchResult.jobs || searchResult.jobs.length === 0) {
+    if (!searchResult || !searchResult.jobs || searchResult.jobs.length === 0) {
       showToast('No jobs found. Try different keywords or location.', 'warning');
       searchLoading?.classList.add('hidden');
       return;
@@ -116,20 +143,37 @@ export const searchJobs = async () => {
         searchResult.jobs.length
       );
       
+      if (!similarResult || !similarResult.similar_jobs || similarResult.similar_jobs.length === 0) {
+        showToast('No matching jobs found. Try different keywords.', 'warning');
+        searchLoading?.classList.add('hidden');
+        return;
+      }
+      
       appState.jobsData = similarResult.similar_jobs;
       appState.queryId = searchResult.query_id;
       appState.jobsFetched = true;
       
       displayJobs(similarResult.similar_jobs);
-      showToast(`Found ${similarResult.similar_jobs.length} matching jobs!`);
+      showToast(`Found ${similarResult.similar_jobs.length} matching jobs!`, 'success');
     }
     
     searchLoading?.classList.add('hidden');
     jobResults?.classList.remove('hidden');
     
   } catch (error: any) {
+    console.error('Search jobs error:', error);
+    
     searchLoading?.classList.add('hidden');
-    showToast(error.response?.data?.detail || 'Error searching jobs. Please try again.', 'error');
+    
+    let errorMessage = 'Error searching jobs. Please try again.';
+    
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    showToast(errorMessage, 'error');
   }
 };
 
@@ -137,7 +181,10 @@ export const displayJobs = (jobs: Job[]) => {
   const jobsContainer = document.getElementById('jobs-container');
   const resultsTitle = document.getElementById('results-title');
   
-  if (!jobsContainer || !jobs.length) return;
+  if (!jobsContainer || !jobs.length) {
+    showToast('No jobs to display.', 'warning');
+    return;
+  }
   
   if (resultsTitle) {
     resultsTitle.textContent = `Found ${jobs.length} Matching Jobs`;
@@ -158,21 +205,26 @@ export const displayJobs = (jobs: Job[]) => {
     const formattedDescription = job.description ? createReadableJobDescription(job.description) : '';
     const previewDescription = job.description ? smartTruncate(job.description, 180) : '';
     
+    // Enhanced company name handling
+    const companyName = job.company_name || job.company || 'Unknown Company';
+    const location = job.location || 'Unknown Location';
+    const title = job.title || 'Unknown Position';
+    
     return `
       <div class="job-card">
         <div class="flex flex-col gap-4">
           <div class="flex items-start justify-between">
             <div class="flex-1">
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">${job.title || 'Unknown Title'}</h3>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">${title}</h3>
               
               <div class="flex items-center space-x-4 text-sm text-gray-600">
                 <div class="flex items-center space-x-1">
                   <i data-lucide="building" class="w-4 h-4"></i>
-                  <span>${job.company_name || job.company || 'Unknown Company'}</span>
+                  <span>${companyName}</span>
                 </div>
                 <div class="flex items-center space-x-1">
                   <i data-lucide="map-pin" class="w-4 h-4"></i>
-                  <span>${job.location || 'Unknown Location'}</span>
+                  <span>${location}</span>
                 </div>
               </div>
             </div>
@@ -255,7 +307,10 @@ export const toggleJobDescription = (jobIndex: number) => {
 };
 
 export const sortJobs = (criteria: string) => {
-  if (!appState.jobsData.length) return;
+  if (!appState.jobsData.length) {
+    showToast('No jobs to sort.', 'warning');
+    return;
+  }
   
   let sortedJobs = [...appState.jobsData];
   

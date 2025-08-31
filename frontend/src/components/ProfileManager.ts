@@ -91,11 +91,14 @@ const setupModalUploadHandlers = () => {
 };
 
 const handleModalFileUpload = async (file: File) => {
-  if (!file) return;
+  if (!file) {
+    showToast('No file selected.', 'error');
+    return;
+  }
   
   const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
   if (!allowedTypes.includes(file.type)) {
-    showToast('Please upload a PDF or DOCX file.', 'error');
+    showToast('Please upload a PDF or DOCX file only.', 'error');
     return;
   }
   
@@ -107,7 +110,10 @@ const handleModalFileUpload = async (file: File) => {
   const uploadArea = document.getElementById('modal-upload-area');
   const uploadProgress = document.getElementById('modal-upload-progress');
   
-  if (!uploadArea || !uploadProgress) return;
+  if (!uploadArea || !uploadProgress) {
+    showToast('Upload interface not found.', 'error');
+    return;
+  }
   
   try {
     uploadArea.classList.add('hidden');
@@ -116,42 +122,65 @@ const handleModalFileUpload = async (file: File) => {
     let progress = 0;
     const progressBar = uploadProgress.querySelector('.progress-bar') as HTMLElement;
     const progressInterval = setInterval(() => {
-      progress += Math.random() * 30;
+      progress += Math.random() * 20 + 5;
       if (progress > 90) progress = 90;
       if (progressBar) progressBar.style.width = `${progress}%`;
-    }, 200);
+    }, 300);
     
+    // Upload resume to API
     const result = await apiService.uploadResume(file);
     
+    if (!result || !result.resume_info || !result.resume_id) {
+      throw new Error('Invalid response from server');
+    }
+    
+    // Save to Firebase
     const saveResult = await resumeService.saveResume(result.resume_info, file.name);
     if (!saveResult.success) {
       console.warn('Failed to save to Firebase:', saveResult.message);
+      showToast('Resume processed but failed to save to profile. Please try again.', 'warning');
     }
     
     clearInterval(progressInterval);
     if (progressBar) progressBar.style.width = '100%';
     
+    // Update app state
     appState.resumeInfo = result.resume_info;
     appState.resumeId = result.resume_id;
     appState.profileCompleted = true;
+    
+    // Update UI to show profile is completed
     updateSuggestionsUI();
     
     setTimeout(() => {
       closeProfileCompletionModal();
-      showToast('Profile completed successfully!');
+      showToast('Profile completed successfully! You can now search for jobs.', 'success');
       showTab('search');
-    }, 500);
+    }, 1000);
     
   } catch (error: any) {
+    console.error('Resume upload error:', error);
+    
     uploadProgress.classList.add('hidden');
     uploadArea.classList.remove('hidden');
-    showToast(error.response?.data?.detail || 'Error processing resume. Please try again.', 'error');
+    
+    let errorMessage = 'Error processing resume. Please try again.';
+    
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    showToast(errorMessage, 'error');
   }
 };
 
 export const closeProfileCompletionModal = () => {
   const modal = document.getElementById('profile-completion-modal');
-  modal?.remove();
+  if (modal) {
+    modal.remove();
+  }
 };
 
 export const skipProfileCompletion = () => {
@@ -173,50 +202,65 @@ export const showProfilePage = async () => {
 };
 
 const loadProfilePageData = async () => {
-  const user = authService.getCurrentUser();
-  const userProfile = await authService.getUserProfile();
-  
-  const basicInfo = document.getElementById('profile-basic-info');
-  if (basicInfo && user) {
-    basicInfo.innerHTML = `
-      <div class="flex items-center space-x-2">
-        <i data-lucide="mail" class="w-4 h-4 text-gray-500"></i>
-        <span><strong>Email:</strong> ${user.email}</span>
-      </div>
-      ${userProfile?.displayName ? `
+  try {
+    const user = authService.getCurrentUser();
+    if (!user) {
+      showToast('Please sign in to view your profile.', 'error');
+      return;
+    }
+    
+    const userProfile = await authService.getUserProfile();
+    
+    const basicInfo = document.getElementById('profile-basic-info');
+    if (basicInfo && user) {
+      basicInfo.innerHTML = `
         <div class="flex items-center space-x-2">
-          <i data-lucide="user" class="w-4 h-4 text-gray-500"></i>
-          <span><strong>Name:</strong> ${userProfile.displayName}</span>
+          <i data-lucide="mail" class="w-4 h-4 text-gray-500"></i>
+          <span><strong>Email:</strong> ${user.email}</span>
         </div>
-      ` : ''}
-      <div class="flex items-center space-x-2">
-        <i data-lucide="calendar" class="w-4 h-4 text-gray-500"></i>
-        <span><strong>Member since:</strong> ${userProfile?.createdAt ? new Date(userProfile.createdAt).toLocaleDateString() : 'Unknown'}</span>
-      </div>
-    `;
-  }
-  
-  const resumeResult = await resumeService.getActiveResume();
-  if (resumeResult.success && resumeResult.resume) {
-    showResumeInProfile(resumeResult.resume);
-  } else {
-    showNoResumeState();
+        ${userProfile?.displayName ? `
+          <div class="flex items-center space-x-2">
+            <i data-lucide="user" class="w-4 h-4 text-gray-500"></i>
+            <span><strong>Name:</strong> ${userProfile.displayName}</span>
+          </div>
+        ` : ''}
+        <div class="flex items-center space-x-2">
+          <i data-lucide="calendar" class="w-4 h-4 text-gray-500"></i>
+          <span><strong>Member since:</strong> ${userProfile?.createdAt ? new Date(userProfile.createdAt).toLocaleDateString() : 'Unknown'}</span>
+        </div>
+      `;
+    }
+    
+    const resumeResult = await resumeService.getActiveResume();
+    if (resumeResult.success && resumeResult.resume) {
+      showResumeInProfile(resumeResult.resume);
+    } else {
+      showNoResumeState();
+    }
+  } catch (error) {
+    console.error('Error loading profile data:', error);
+    showToast('Error loading profile data.', 'error');
   }
 };
 
 const showResumeInProfile = (resumeRecord: any) => {
-  document.getElementById('no-resume-state')?.classList.add('hidden');
-  document.getElementById('resume-display')?.classList.remove('hidden');
-  
-  const filename = document.getElementById('resume-filename');
-  const uploadDate = document.getElementById('resume-upload-date');
-  
-  if (filename) filename.textContent = resumeRecord.filename;
-  if (uploadDate) {
-    uploadDate.textContent = `Uploaded on ${new Date(resumeRecord.uploadedAt).toLocaleDateString()}`;
+  try {
+    document.getElementById('no-resume-state')?.classList.add('hidden');
+    document.getElementById('resume-display')?.classList.remove('hidden');
+    
+    const filename = document.getElementById('resume-filename');
+    const uploadDate = document.getElementById('resume-upload-date');
+    
+    if (filename) filename.textContent = resumeRecord.filename || 'resume.pdf';
+    if (uploadDate) {
+      uploadDate.textContent = `Uploaded on ${new Date(resumeRecord.uploadedAt).toLocaleDateString()}`;
+    }
+    
+    window.currentResumeData = resumeRecord.resumeInfo;
+  } catch (error) {
+    console.error('Error showing resume in profile:', error);
+    showNoResumeState();
   }
-  
-  window.currentResumeData = resumeRecord.resumeInfo;
 };
 
 const showNoResumeState = () => {
@@ -243,7 +287,10 @@ export const toggleResumeDetails = () => {
 };
 
 const loadResumeDetails = () => {
-  if (!window.currentResumeData) return;
+  if (!window.currentResumeData) {
+    showToast('Resume data not available.', 'error');
+    return;
+  }
   
   const resumeInfo = window.currentResumeData;
   
@@ -269,8 +316,8 @@ const loadResumeDetails = () => {
   const modalSkills = document.getElementById('modal-skills');
   if (modalSkills && resumeInfo.extracted_skills) {
     modalSkills.innerHTML = resumeInfo.extracted_skills
-    .map((skill: string) => `<span class="skill-tag">${skill}</span>`)
-    .join('');
+      .map((skill: string) => `<span class="skill-tag">${skill}</span>`)
+      .join('');
   }
   
   const sections = resumeInfo.sections || {};
@@ -305,39 +352,63 @@ export const showFileUploadModal = () => {
 
 export const closeFileUploadModal = () => {
   document.getElementById('file-upload-modal')?.classList.add('hidden');
+  
+  // Reset upload modal state
+  const uploadArea = document.getElementById('upload-modal-area');
+  const uploadProgress = document.getElementById('upload-modal-progress');
+  const fileInput = document.getElementById('upload-modal-input') as HTMLInputElement;
+  
+  uploadArea?.classList.remove('hidden');
+  uploadProgress?.classList.add('hidden');
+  if (fileInput) fileInput.value = '';
 };
 
 const setupUploadModalHandlers = () => {
   const uploadArea = document.getElementById('upload-modal-area');
   const fileInput = document.getElementById('upload-modal-input') as HTMLInputElement;
   
-  uploadArea?.addEventListener('click', () => fileInput?.click());
-  uploadArea?.addEventListener('dragover', (e) => {
+  // Remove existing event listeners to prevent duplicates
+  const newUploadArea = uploadArea?.cloneNode(true) as HTMLElement;
+  const newFileInput = fileInput?.cloneNode(true) as HTMLInputElement;
+  
+  if (uploadArea && newUploadArea) {
+    uploadArea.parentNode?.replaceChild(newUploadArea, uploadArea);
+  }
+  if (fileInput && newFileInput) {
+    fileInput.parentNode?.replaceChild(newFileInput, fileInput);
+  }
+  
+  // Add fresh event listeners
+  newUploadArea?.addEventListener('click', () => newFileInput?.click());
+  newUploadArea?.addEventListener('dragover', (e) => {
     e.preventDefault();
-    uploadArea.classList.add('border-primary-400', 'bg-primary-50');
+    newUploadArea.classList.add('border-primary-400', 'bg-primary-50');
   });
-  uploadArea?.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+  newUploadArea?.addEventListener('dragleave', () => {
+    newUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
   });
-  uploadArea?.addEventListener('drop', (e) => {
+  newUploadArea?.addEventListener('drop', (e) => {
     e.preventDefault();
-    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+    newUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
     const file = e.dataTransfer?.files[0];
     if (file) handleUploadModalFile(file);
   });
   
-  fileInput?.addEventListener('change', (e) => {
+  newFileInput?.addEventListener('change', (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) handleUploadModalFile(file);
   });
 };
 
 const handleUploadModalFile = async (file: File) => {
-  if (!file) return;
+  if (!file) {
+    showToast('No file selected.', 'error');
+    return;
+  }
   
   const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
   if (!allowedTypes.includes(file.type)) {
-    showToast('Please upload a PDF or DOCX file.', 'error');
+    showToast('Please upload a PDF or DOCX file only.', 'error');
     return;
   }
   
@@ -349,7 +420,10 @@ const handleUploadModalFile = async (file: File) => {
   const uploadArea = document.getElementById('upload-modal-area');
   const uploadProgress = document.getElementById('upload-modal-progress');
   
-  if (!uploadArea || !uploadProgress) return;
+  if (!uploadArea || !uploadProgress) {
+    showToast('Upload interface not found.', 'error');
+    return;
+  }
   
   try {
     uploadArea.classList.add('hidden');
@@ -358,16 +432,22 @@ const handleUploadModalFile = async (file: File) => {
     let progress = 0;
     const progressBar = uploadProgress.querySelector('.progress-bar') as HTMLElement;
     const progressInterval = setInterval(() => {
-      progress += Math.random() * 30;
+      progress += Math.random() * 20 + 5;
       if (progress > 90) progress = 90;
       if (progressBar) progressBar.style.width = `${progress}%`;
-    }, 200);
+    }, 300);
     
     const result = await apiService.uploadResume(file);
+    
+    if (!result || !result.resume_info || !result.resume_id) {
+      throw new Error('Invalid response from server');
+    }
     
     const saveResult = await resumeService.replaceResume(result.resume_info, file.name);
     if (!saveResult.success) {
       console.warn('Failed to save to Firebase:', saveResult.message);
+      showToast('Resume processed but failed to save. Please try again.', 'warning');
+      return;
     }
     
     clearInterval(progressInterval);
@@ -380,13 +460,24 @@ const handleUploadModalFile = async (file: File) => {
     setTimeout(() => {
       closeFileUploadModal();
       loadProfilePageData();
-      showToast('Resume updated successfully!');
-    }, 500);
+      showToast('Resume updated successfully!', 'success');
+    }, 1000);
     
   } catch (error: any) {
+    console.error('Upload error:', error);
+    
     uploadProgress.classList.add('hidden');
     uploadArea.classList.remove('hidden');
-    showToast(error.response?.data?.detail || 'Error processing resume. Please try again.', 'error');
+    
+    let errorMessage = 'Error processing resume. Please try again.';
+    
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    showToast(errorMessage, 'error');
   }
 };
 
@@ -408,11 +499,13 @@ export const deleteResumeFromProfile = async () => {
       appState.resumeId = null;
       
       showNoResumeState();
-      showToast('Resume deleted successfully!');
+      updateSuggestionsUI();
+      showToast('Resume deleted successfully!', 'success');
     } else {
       showToast(result.message, 'error');
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Delete resume error:', error);
     showToast('Error deleting resume. Please try again.', 'error');
   }
 };
@@ -437,7 +530,7 @@ export const checkFirstTimeUser = async (retryCount = 0) => {
     if (!userProfile && retryCount < maxRetries) {
       setTimeout(() => {
         checkFirstTimeUser(retryCount + 1);
-      }, 1500); // Wait 1.5 seconds before retry
+      }, 1500);
       return;
     }
     
@@ -464,12 +557,15 @@ export const checkFirstTimeUser = async (retryCount = 0) => {
   }
 };
 
-export const handleProfileFileUpload = (file: File) => {
-  if (!file) return;
+export const handleProfileFileUpload = async (file: File) => {
+  if (!file) {
+    showToast('No file selected.', 'error');
+    return;
+  }
   
   const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
   if (!allowedTypes.includes(file.type)) {
-    showToast('Please upload a PDF or DOCX file.', 'error');
+    showToast('Please upload a PDF or DOCX file only.', 'error');
     return;
   }
   
@@ -478,7 +574,7 @@ export const handleProfileFileUpload = (file: File) => {
     return;
   }
   
-  uploadResumeToProfile(file);
+  await uploadResumeToProfile(file);
 };
 
 const uploadResumeToProfile = async (file: File) => {
@@ -486,7 +582,10 @@ const uploadResumeToProfile = async (file: File) => {
   const uploadProgress = document.getElementById('profile-upload-progress');
   const profileInfo = document.getElementById('profile-info');
   
-  if (!uploadArea || !uploadProgress) return;
+  if (!uploadArea || !uploadProgress) {
+    showToast('Upload interface not found.', 'error');
+    return;
+  }
   
   try {
     uploadArea.classList.add('hidden');
@@ -495,16 +594,22 @@ const uploadResumeToProfile = async (file: File) => {
     let progress = 0;
     const progressBar = uploadProgress.querySelector('.progress-bar') as HTMLElement;
     const progressInterval = setInterval(() => {
-      progress += Math.random() * 30;
+      progress += Math.random() * 20 + 5;
       if (progress > 90) progress = 90;
       if (progressBar) progressBar.style.width = `${progress}%`;
-    }, 200);
+    }, 300);
     
     const result = await apiService.uploadResume(file);
+    
+    if (!result || !result.resume_info || !result.resume_id) {
+      throw new Error('Invalid response from server');
+    }
     
     const saveResult = await resumeService.saveResume(result.resume_info, file.name);
     if (!saveResult.success) {
       console.warn('Failed to save to Firebase:', saveResult.message);
+      showToast('Resume processed but failed to save. Please try again.', 'warning');
+      return;
     }
     
     clearInterval(progressInterval);
@@ -518,64 +623,86 @@ const uploadResumeToProfile = async (file: File) => {
       uploadProgress.classList.add('hidden');
       displayProfileInfo(result.resume_info, file.name);
       profileInfo?.classList.remove('hidden');
-      showToast('Profile completed successfully!');
-    }, 500);
+      updateSuggestionsUI();
+      showToast('Profile completed successfully!', 'success');
+    }, 1000);
     
   } catch (error: any) {
+    console.error('Profile upload error:', error);
+    
     uploadProgress.classList.add('hidden');
     uploadArea.classList.remove('hidden');
-    showToast(error.response?.data?.detail || 'Error processing resume. Please try again.', 'error');
+    
+    let errorMessage = 'Error processing resume. Please try again.';
+    
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    showToast(errorMessage, 'error');
   }
 };
 
 const displayProfileInfo = (resumeInfo: ResumeInfo, fileName: string) => {
-  const contactInfo = document.getElementById('profile-contact-info');
-  if (contactInfo) {
-    contactInfo.innerHTML = '';
-    if (resumeInfo.email) {
-      contactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="mail" class="w-4 h-4"></i><span>${resumeInfo.email}</span></div>`;
+  try {
+    const contactInfo = document.getElementById('profile-contact-info');
+    if (contactInfo) {
+      contactInfo.innerHTML = '';
+      if (resumeInfo.email) {
+        contactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="mail" class="w-4 h-4"></i><span>${resumeInfo.email}</span></div>`;
+      }
+      if (resumeInfo.phone) {
+        contactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="phone" class="w-4 h-4"></i><span>${resumeInfo.phone}</span></div>`;
+      }
     }
-    if (resumeInfo.phone) {
-      contactInfo.innerHTML += `<div class="flex items-center space-x-2"><i data-lucide="phone" class="w-4 h-4"></i><span>${resumeInfo.phone}</span></div>`;
+    
+    const fileNameElement = document.getElementById('profile-file-name');
+    if (fileNameElement) {
+      fileNameElement.textContent = fileName;
     }
-  }
-  
-  const fileNameElement = document.getElementById('profile-file-name');
-  if (fileNameElement) {
-    fileNameElement.textContent = fileName;
-  }
-  
-  const summaryElement = document.getElementById('profile-summary');
-  if (summaryElement) {
-    summaryElement.textContent = resumeInfo.summary || 'No summary available';
-  }
-  
-  const skillsDisplay = document.getElementById('profile-skills-display');
-  if (skillsDisplay && resumeInfo.extracted_skills) {
-    skillsDisplay.innerHTML = resumeInfo.extracted_skills
-      .map((skill: string) => `<span class="skill-tag">${skill}</span>`)
-      .join('');
-  }
-  
-  const sections = resumeInfo.sections || {};
-  ['experience', 'education', 'projects'].forEach(section => {
-    const contentElement = document.getElementById(`profile-${section}-content`);
-    if (contentElement) {
-      contentElement.textContent = sections[section as keyof typeof sections] || 'Not specified';
+    
+    const summaryElement = document.getElementById('profile-summary');
+    if (summaryElement) {
+      summaryElement.textContent = resumeInfo.summary || 'No summary available';
     }
-  });
-  
-  const uploadArea = document.getElementById('profile-upload-area');
-  const profileCompleted = document.getElementById('profile-completed');
-  uploadArea?.classList.add('hidden');
-  profileCompleted?.classList.remove('hidden');
-  
-  if (window.lucide) {
-    window.lucide.createIcons();
+    
+    const skillsDisplay = document.getElementById('profile-skills-display');
+    if (skillsDisplay && resumeInfo.extracted_skills) {
+      skillsDisplay.innerHTML = resumeInfo.extracted_skills
+        .map((skill: string) => `<span class="skill-tag">${skill}</span>`)
+        .join('');
+    }
+    
+    const sections = resumeInfo.sections || {};
+    ['experience', 'education', 'projects'].forEach(section => {
+      const contentElement = document.getElementById(`profile-${section}-content`);
+      if (contentElement) {
+        contentElement.textContent = sections[section as keyof typeof sections] || 'Not specified';
+      }
+    });
+    
+    const uploadArea = document.getElementById('profile-upload-area');
+    const profileCompleted = document.getElementById('profile-completed');
+    uploadArea?.classList.add('hidden');
+    profileCompleted?.classList.remove('hidden');
+    
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  } catch (error) {
+    console.error('Error displaying profile info:', error);
+    showToast('Error displaying profile information.', 'error');
   }
 };
 
 export const displayExistingResume = (resumeRecord: any) => {
+  if (!resumeRecord || !resumeRecord.resumeInfo) {
+    showToast('Resume data not available.', 'error');
+    return;
+  }
+  
   displayProfileInfo(resumeRecord.resumeInfo, resumeRecord.filename);
   
   const uploadDate = document.getElementById('profile-upload-date');
@@ -586,7 +713,10 @@ export const displayExistingResume = (resumeRecord: any) => {
 };
 
 export const removeResume = async () => {
-  if (!appState.resumeId) return;
+  if (!appState.resumeId) {
+    showToast('No resume to remove.', 'error');
+    return;
+  }
   
   if (!confirm('Are you sure you want to remove your resume? You will need to upload a new one to continue using the service.')) {
     return;
@@ -607,12 +737,14 @@ export const removeResume = async () => {
       profileCompleted?.classList.add('hidden');
       profileInfo?.classList.add('hidden');
       
-      showToast('Resume removed successfully!');
-      showTab('profile');
+      updateSuggestionsUI();
+      showToast('Resume removed successfully!', 'success');
+      showTab('search');
     } else {
       showToast(result.message, 'error');
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Remove resume error:', error);
     showToast('Error removing resume. Please try again.', 'error');
   }
 };
@@ -624,9 +756,11 @@ export const updateSuggestionsUI = () => {
   
   if (appState.profileCompleted && appState.resumeInfo) {
     getSuggestionsBtn?.removeAttribute('disabled');
+    getSuggestionsBtn?.classList.remove('opacity-50', 'cursor-not-allowed');
     noProfileSuggestions?.classList.add('hidden');
   } else {
     getSuggestionsBtn?.setAttribute('disabled', 'true');
+    getSuggestionsBtn?.classList.add('opacity-50', 'cursor-not-allowed');
     noProfileSuggestions?.classList.remove('hidden');
     suggestionsContent?.classList.add('hidden');
   }

@@ -57,17 +57,37 @@ import {
 import { checkAPIStatus } from './components/ApiManager';
 
 // Initialize Application
+// Add this to your existing main.ts after the initializeApp function:
+
 const initializeApp = () => {
-  authService.onAuthStateChange((user, isNewSignUp) => {
-    if (user && !isNewSignUp) {
-      console.log('User signed in:', user.email);
+  // Ensure toast container exists
+  ensureToastContainer();
+  
+authService.onAuthStateChange((user, isNewSignUp) => {
+  if (user) {
+    console.log('User signed in:', user.email);
+    setTimeout(() => {
+      document.getElementById('app-loading')?.classList.add('hidden');
+      document.getElementById('auth-section')?.classList.add('hidden');
+      document.getElementById('main-app')?.classList.remove('hidden');
       showMainApp();
-      initializeCitySelect(); // ADD THIS LINE
-    } else if (!user) {
-      console.log('User signed out');
+      initializeCitySelect();
+      showTab('search');
+    }, 100);
+  } else {
+    console.log('User signed out');
+    setTimeout(() => {
+      document.getElementById('app-loading')?.classList.add('hidden');
+      document.getElementById('main-app')?.classList.add('hidden');
+      document.getElementById('auth-section')?.classList.remove('hidden');
       showAuthForms();
-    }
-  });
+    }, 100);
+  }
+  // Show auth forms by default on app load
+if (!authService.getCurrentUser()) {
+  showAuthForms();
+}
+});
   
   checkAPIStatus();
   updateStepIndicator('search');
@@ -77,7 +97,24 @@ const initializeApp = () => {
   }
   
   setupEventListeners();
-  initializeCitySelect(); // ADD THIS LINE HERE TOO
+  initializeCitySelect();
+};
+
+// Add this new function:
+const ensureToastContainer = () => {
+  let toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.style.cssText = `
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 9999;
+      pointer-events: none;
+    `;
+    document.body.appendChild(toastContainer);
+  }
 };
 const initializeCitySelect = async () => {
   const countrySelect = document.getElementById('country-select') as HTMLSelectElement;
@@ -104,7 +141,44 @@ const initializeCitySelect = async () => {
 };
 
 const setupEventListeners = () => {
+  // Add after the existing profile upload listeners:
+  // Close profile modal when clicking outside
+document.getElementById('profile-page-modal')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    closeProfilePage();
+  }
+});
+
+// Close upload modal when clicking outside
+document.getElementById('file-upload-modal')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    closeFileUploadModal();
+  }
+});
+const uploadModalArea = document.getElementById('upload-modal-area');
+const uploadModalInput = document.getElementById('upload-modal-input') as HTMLInputElement;
+
+uploadModalArea?.addEventListener('click', () => uploadModalInput?.click());
+uploadModalArea?.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadModalArea.classList.add('dragover');
+});
+uploadModalArea?.addEventListener('dragleave', () => {
+  uploadModalArea.classList.remove('dragover');
+});
+uploadModalArea?.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadModalArea.classList.remove('dragover');
+  const file = e.dataTransfer?.files[0];
+  if (file) handleProfileFileUpload(file);
+});
+
+uploadModalInput?.addEventListener('change', (e) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) handleProfileFileUpload(file);
+});
   // Profile page listeners
+  
   document.getElementById('view-profile-btn')?.addEventListener('click', showProfilePage);
   document.getElementById('close-profile-modal')?.addEventListener('click', closeProfilePage);
   document.getElementById('upload-resume-btn')?.addEventListener('click', showFileUploadModal);
@@ -277,6 +351,8 @@ declare global {
     removeResume: typeof removeResume;
     skipProfileCompletion: typeof skipProfileCompletion;
     toggleResumeDetails: typeof toggleResumeDetails;
+    hideErrorBanner: () => void;
+    hideSuccessBanner: () => void;
     currentResumeData: any;
     lucide: any;
   }
@@ -291,6 +367,21 @@ window.showSignInForm = showSignInForm;
 window.removeResume = removeResume;
 window.skipProfileCompletion = skipProfileCompletion;
 window.toggleResumeDetails = toggleResumeDetails;
+window.hideErrorBanner = () => {
+  const banner = document.getElementById('error-banner');
+  if (banner) {
+    banner.classList.add('-translate-y-full');
+    setTimeout(() => banner.remove(), 300);
+  }
+};
+
+window.hideSuccessBanner = () => {
+  const banner = document.getElementById('success-banner');
+  if (banner) {
+    banner.classList.add('-translate-y-full');
+    setTimeout(() => banner.remove(), 300);
+  }
+};
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);

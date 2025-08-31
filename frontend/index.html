@@ -75,6 +75,69 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
+        #main-app.show {
+    display: block !important;
+}
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            margin-bottom: 0.5rem;
+        }
+
+        .opacity-50 {
+            opacity: 0.5;
+        }
+        #auth-section {
+    display: flex;
+}
+
+       #main-app {
+    display: none;
+}
+
+        .app-loading {
+        position: fixed;
+        inset: 0;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        }
+
+        .cursor-not-allowed {
+            cursor: not-allowed;
+        }
+
+        /* Enhanced button states */
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        button:disabled:hover {
+            background-color: inherit;
+        }
+
+        /* Better error states */
+        .border-red-300 {
+            border-color: #fca5a5;
+        }
+
+        .text-red-600 {
+            color: #dc2626;
+        }
+
+        .bg-red-50 {
+            background-color: #fef2f2;
+        }
         
         .match-excellent {
             background-color: #dcfce7;
@@ -252,6 +315,14 @@
 </head>
 <body class="bg-gray-50 font-sans">
     <div id="app">
+        <div id="app-loading" class="app-loading">
+            <div class="text-center">
+                <div class="w-8 h-8 loading-spinner mx-auto mb-4">
+                <i data-lucide="loader" class="w-8 h-8 text-primary-600"></i>
+                </div>
+                <p class="text-gray-600">Loading...</p>
+            </div>
+            </div>
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -836,6 +907,22 @@
         </div>
     </div>
 
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/main.ts">
+        window.hideErrorBanner = () => {
+    const banner = document.getElementById('error-banner');
+    if (banner) {
+      banner.classList.add('-translate-y-full');
+      setTimeout(() => banner.remove(), 300);
+    }
+  };
+  
+  window.hideSuccessBanner = () => {
+    const banner = document.getElementById('success-banner');
+    if (banner) {
+      banner.classList.add('-translate-y-full');
+      setTimeout(() => banner.remove(), 300);
+    }
+  };
+    </script>
 </body>
 </html>

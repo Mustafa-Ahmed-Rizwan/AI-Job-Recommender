@@ -42,6 +42,7 @@ export const startAnalysis = async () => {
     
   } catch (error: any) {
     analysisLoading?.classList.add('hidden');
+    console.error('Analysis error:', error);
     showToast(error.response?.data?.detail || 'Error during analysis. Please try again.', 'error');
   }
 };
@@ -53,7 +54,10 @@ const displayAnalysisResults = (analyses: JobAnalysis[]) => {
   if (!analysisTabsContainer || !analysisContent || !analyses.length) return;
   
   const tabs = analyses.map((analysis, index) => {
-    const jobTitle = analysis.job_info?.title || `Job ${index + 1}`;
+    // Try multiple sources for job title
+    const jobTitle = analysis.job_info?.title ||
+                    appState.jobsData[index]?.title || 
+                    `Job ${index + 1}`;
     const truncatedTitle = truncateText(jobTitle, 25);
     return `
       <button onclick="showAnalysisTab(${index})" 
@@ -84,10 +88,27 @@ export const showAnalysisTab = (index: number) => {
     }
   });
   
-  const jobInfo = analysis.job_info || {};
+  // Enhanced job info extraction - try multiple sources
+  const jobInfo = analysis.job_info || appState.jobsData[index] || {};
   const skillGap = analysis.skill_gap_analysis || {};
   const recommendations = analysis.recommendations || {};
   const jobMatch = analysis.job_match_assessment || {};
+  
+  // Try multiple fields for company name
+  const companyName = jobInfo.company || 
+                      appState.jobsData[index]?.company || 
+                      appState.jobsData[index]?.company_name || 
+                      'Unknown Company';
+  
+  // Try multiple fields for location
+  const location = jobInfo.location || 
+                   appState.jobsData[index]?.location || 
+                   'Unknown Location';
+  
+  // Try multiple fields for title
+  const title = jobInfo.title || 
+                appState.jobsData[index]?.title || 
+                'Unknown Position';
   
   const matchPercentage = parseMatchPercentage(jobMatch.overall_match_percentage || 0);
   
@@ -95,15 +116,15 @@ export const showAnalysisTab = (index: number) => {
     <div class="bg-white rounded-xl shadow-soft p-6 space-y-8">
       <!-- Job Header -->
       <div class="border-b border-gray-200 pb-6">
-        <h3 class="text-2xl font-bold text-gray-900 mb-2">${jobInfo.title || 'Unknown Position'}</h3>
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">${title}</h3>
         <div class="flex items-center space-x-4 text-gray-600">
           <span class="flex items-center space-x-1">
             <i data-lucide="building" class="w-4 h-4"></i>
-            <span>${jobInfo.company || 'Unknown Company'}</span>
+            <span>${companyName}</span>
           </span>
           <span class="flex items-center space-x-1">
             <i data-lucide="map-pin" class="w-4 h-4"></i>
-            <span>${jobInfo.location || 'Unknown Location'}</span>
+            <span>${location}</span>
           </span>
         </div>
         
@@ -242,7 +263,6 @@ export const showAnalysisTab = (index: number) => {
                 `).join('')}
               </ul>
             </div>
-          </details>
           </details>
         ` : ''}
         

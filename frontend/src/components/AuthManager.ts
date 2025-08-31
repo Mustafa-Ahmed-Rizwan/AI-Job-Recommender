@@ -4,9 +4,29 @@ import { appState } from './AppState';
 import { checkFirstTimeUser } from './ProfileManager';
 
 export const showAuthForms = () => {
-  document.getElementById('auth-section')?.classList.remove('hidden');
-  document.getElementById('main-app')?.classList.add('hidden');
-  document.getElementById('view-profile-btn')?.style.setProperty('display', 'none');
+  // Hide loading screen first
+  document.getElementById('app-loading')?.classList.add('hidden');
+  
+  const authSection = document.getElementById('auth-section');
+  const mainApp = document.getElementById('main-app');
+  const viewProfileBtn = document.getElementById('view-profile-btn');
+  
+  // Show auth section properly
+  if (authSection) {
+    authSection.classList.remove('hidden');
+    authSection.style.display = 'flex';
+  }
+  
+  // Hide main app
+  if (mainApp) {
+    mainApp.classList.add('hidden');
+    mainApp.style.display = 'none';
+  }
+  
+  // Hide profile button
+  if (viewProfileBtn) {
+    viewProfileBtn.style.display = 'none';
+  }
   
   // Clear user info from header
   const userInfo = document.getElementById('user-info');
@@ -22,9 +42,29 @@ export const showAuthForms = () => {
 };
 
 export const showMainApp = async () => {
-  document.getElementById('auth-section')?.classList.add('hidden');
-  document.getElementById('main-app')?.classList.remove('hidden');
-  document.getElementById('view-profile-btn')?.style.setProperty('display', 'block');
+  // Hide loading screen first
+  document.getElementById('app-loading')?.classList.add('hidden');
+  
+  const authSection = document.getElementById('auth-section');
+  const mainApp = document.getElementById('main-app');
+  const viewProfileBtn = document.getElementById('view-profile-btn');
+  
+  // Hide auth section
+  if (authSection) {
+    authSection.classList.add('hidden');
+    authSection.style.display = 'none';
+  }
+  
+  // Show main app
+  if (mainApp) {
+    mainApp.classList.remove('hidden');
+    mainApp.style.display = 'block';
+  }
+  
+  // Show profile button
+  if (viewProfileBtn) {
+    viewProfileBtn.style.display = 'block';
+  }
   
   const user = authService.getCurrentUser();
   const userInfo = document.getElementById('user-info');
@@ -32,10 +72,13 @@ export const showMainApp = async () => {
     userInfo.textContent = `Welcome, ${user.email}`;
   }
   
+  // Show the search tab by default
+  showTab('search');
+  
   // Add a small delay to allow Firebase to sync
   setTimeout(async () => {
     await checkFirstTimeUser();
-  }, 1000); // 1 second delay
+  }, 1000);
 };
 
 export const clearAllAuthForms = () => {
@@ -122,9 +165,8 @@ export const handleSignIn = async (e: Event) => {
     
     if (result.success) {
       showToast('Signed in successfully!');
-      showMainApp();
+      // Don't call showMainApp here - let the auth state change handler do it
     } else {
-      // Show error and restore form
       showToast(result.message, 'error');
       authLoading?.classList.add('hidden');
       signinForm?.classList.remove('hidden');
@@ -132,17 +174,31 @@ export const handleSignIn = async (e: Event) => {
   } catch (error: any) {
     console.error('Sign in error:', error);
     
-    // Handle specific Firebase authentication errors
-    let errorMessage = 'Invalid email or password. Please try again.';
+    // Enhanced error handling with proper Firebase error codes
+    let errorMessage = 'Sign in failed. Please try again.';
     
-    if (error.code === 'auth/invalid-credential') {
-      errorMessage = 'No account found with this email address or incorrect password.';
-    } else if (error.code === 'auth/user-not-found') {
-      errorMessage = 'No account found with this email address.';
-    } else if (error.code === 'auth/wrong-password') {
-      errorMessage = 'Incorrect password.';
-    } else if (error.code === 'auth/invalid-email') {
-      errorMessage = 'Please enter a valid email address.';
+    if (error.code) {
+      switch (error.code) {
+        case 'auth/invalid-credential':
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = 'This account has been disabled.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection.';
+          break;
+        default:
+          errorMessage = `Authentication error: ${error.message}`;
+      }
     }
     
     showToast(errorMessage, 'error');
@@ -158,6 +214,16 @@ export const handleSignUp = async (e: Event) => {
   const password = (document.getElementById('signup-password') as HTMLInputElement).value;
   const displayName = (document.getElementById('signup-name') as HTMLInputElement).value;
   
+  if (!email || !password) {
+    showToast('Please fill in all required fields.', 'error');
+    return;
+  }
+  
+  if (password.length < 6) {
+    showToast('Password must be at least 6 characters long.', 'error');
+    return;
+  }
+  
   const authLoading = document.getElementById('auth-loading');
   const signupForm = document.getElementById('signup-form');
   
@@ -168,16 +234,41 @@ export const handleSignUp = async (e: Event) => {
     const result = await authService.signUp(email, password, displayName);
     
     if (result.success) {
-      showToast('Account created successfully! Please sign in to continue.');
+      showToast('Account created successfully! Please sign in to continue.', 'success');
       setTimeout(() => {
+        authLoading?.classList.add('hidden');
         showSignInForm();
-      }, 100);
+      }, 1000);
     } else {
       showToast(result.message, 'error');
+      authLoading?.classList.add('hidden');
+      signupForm?.classList.remove('hidden');
     }
-  } catch (error) {
-    showToast('Sign up failed. Please try again.', 'error');
-  } finally {
+  } catch (error: any) {
+    console.error('Sign up error:', error);
+    
+    let errorMessage = 'Sign up failed. Please try again.';
+    
+    if (error.code) {
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          errorMessage = 'An account with this email already exists.';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password is too weak. Please use at least 6 characters.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Please enter a valid email address.';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'Email/password accounts are not enabled.';
+          break;
+        default:
+          errorMessage = `Sign up error: ${error.message}`;
+      }
+    }
+    
+    showToast(errorMessage, 'error');
     authLoading?.classList.add('hidden');
     signupForm?.classList.remove('hidden');
   }
@@ -187,7 +278,6 @@ export const handleLogout = async () => {
   try {
     const result = await authService.logout();
     if (result.success) {
-      // Clear user info immediately
       const userInfo = document.getElementById('user-info');
       if (userInfo) {
         userInfo.textContent = '';
@@ -196,14 +286,14 @@ export const handleLogout = async () => {
       showToast('Signed out successfully!');
       clearAllAuthForms();
       resetApplication();
-      showAuthForms(); // This will now clear user info
+      showAuthForms();
     } else {
       showToast(result.message, 'error');
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Logout error:', error);
     showToast('Logout failed. Please try again.', 'error');
   }
-  // Remove the finally block that was showing loading states
 };
 
 const resetApplication = () => {
@@ -225,6 +315,4 @@ const resetApplication = () => {
   const countrySelect = document.getElementById('country-select') as HTMLSelectElement;
   if (jobQueryInput) jobQueryInput.value = '';
   if (countrySelect) countrySelect.value = 'Pakistan';
-  
-  showToast('Application reset successfully!');
 };
