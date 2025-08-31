@@ -62,6 +62,7 @@ const initializeApp = () => {
     if (user && !isNewSignUp) {
       console.log('User signed in:', user.email);
       showMainApp();
+      initializeCitySelect(); // ADD THIS LINE
     } else if (!user) {
       console.log('User signed out');
       showAuthForms();
@@ -76,6 +77,30 @@ const initializeApp = () => {
   }
   
   setupEventListeners();
+  initializeCitySelect(); // ADD THIS LINE HERE TOO
+};
+const initializeCitySelect = async () => {
+  const countrySelect = document.getElementById('country-select') as HTMLSelectElement;
+  const citySelect = document.getElementById('city-select') as HTMLSelectElement;
+  
+  if (countrySelect && citySelect) {
+    // Load cities for default country (Pakistan)
+    try {
+      const result = await apiService.getCities('Pakistan');
+      citySelect.innerHTML = '<option value="">Select City (Optional)</option>';
+      result.cities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city;
+        option.textContent = city;
+        citySelect.appendChild(option);
+      });
+      citySelect.disabled = false;
+    } catch (error) {
+      console.error('Error loading initial cities:', error);
+      citySelect.innerHTML = '<option value="">Select City (Optional)</option>';
+      citySelect.disabled = false;
+    }
+  }
 };
 
 const setupEventListeners = () => {
@@ -115,6 +140,30 @@ const setupEventListeners = () => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) handleProfileFileUpload(file);
   });
+  // File upload modal listeners (ADD THESE)
+  const uploadModalArea = document.getElementById('upload-modal-area');
+  const uploadModalInput = document.getElementById('upload-modal-input') as HTMLInputElement;
+  
+  uploadModalArea?.addEventListener('click', () => uploadModalInput?.click());
+  uploadModalArea?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadModalArea.classList.add('border-primary-400', 'bg-primary-50');
+  });
+  uploadModalArea?.addEventListener('dragleave', () => {
+    uploadModalArea.classList.remove('border-primary-400', 'bg-primary-50');
+  });
+  uploadModalArea?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadModalArea.classList.remove('border-primary-400', 'bg-primary-50');
+    const file = e.dataTransfer?.files[0];
+    if (file) handleProfileFileUpload(file);
+  });
+  
+  uploadModalInput?.addEventListener('change', (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) handleProfileFileUpload(file);
+  });
+
   
   // Country/city selection
   document.getElementById('country-select')?.addEventListener('change', async (e) => {

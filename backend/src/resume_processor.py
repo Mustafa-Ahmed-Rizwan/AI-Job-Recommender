@@ -1,17 +1,31 @@
-# backend/src/resume_processor.py
+# backend/src/resume_processor.py (top of file) - REPLACE imports block with:
+
 import os
 import re
 import json
+import logging
 from typing import Dict, List, Any
+
 import PyPDF2
 import docx
-# from sentence_transformers import SentenceTransformer
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 import pinecone
 from pinecone import Pinecone
 import numpy as np
 from dotenv import load_dotenv
 import hashlib
+
+# retry + networking + requests
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+import urllib3
+import requests
+
+# Optional local fallback (sentence-transformers) is imported lazily in the fallback block
+# add after imports
+logging.basicConfig(level=logging.INFO)   # change level to DEBUG when debugging
+logger = logging.getLogger(__name__)
+
+# =============================
 
 load_dotenv()
 
@@ -20,10 +34,29 @@ class ResumeProcessor:
         hf_token = os.getenv("HF_API_TOKEN")
         if not hf_token:
             raise ValueError("HF_API_TOKEN not found in .env")
-        self.model = HuggingFaceEndpointEmbeddings(
-           model="sentence-transformers/all-MiniLM-L6-v2",
-            huggingfacehub_api_token=hf_token
-        )
+       # ===== REPLACE YOUR HF init WITH THIS BLOCK =====
+        try:
+            # attempt to use Hugging Face endpoint / wrapper as before
+            self.model = HuggingFaceEndpointEmbeddings(
+                model="sentence-transformers/all-MiniLM-L6-v2",
+                huggingfacehub_api_token=hf_token
+            )
+        except Exception as _hf_err:
+            # Local fallback: sentence-transformers
+            from sentence_transformers import SentenceTransformer
+            st = SentenceTransformer("all-MiniLM-L6-v2")  # change model name if you prefer
+
+            class LocalWrapper:
+                def embed_query(self, text: str):
+                    # return same shape/type as HF wrapper (list or numpy array)
+                    emb = st.encode(text, show_progress_bar=False)
+                    return emb.tolist()
+
+            self.model = LocalWrapper()
+            # optional: log fallback
+            logger.warning("HuggingFace endpoint init failed; using local sentence-transformers fallback.")
+# =================================================
+
 
         
         # Initialize Pinecone
@@ -160,6 +193,38 @@ class ResumeProcessor:
                 cleaned_skills.append(skill)
         
         return cleaned_skills
+    # add inside your class (e.g., ResumeProcessor) or as a module-level function
+    @retry(reraise=True,
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(4),
+        retry=retry_if_exception_type((urllib3.exceptions.ReadTimeoutError, requests.exceptions.ReadTimeout)))
+    def _embed_chunk_with_retry(self, chunk_text: str):
+        return self.model.embed_query(chunk_text)
+
+    def _embed_text(self, text_for_embedding: str, chunk_size: int = 1200):
+        """
+        Unified embed helper: chunks text, retries per-chunk, averages chunk embeddings.
+        Call: embedding = self._embed_text(text_for_embedding)
+        Returns: list[float]
+        """
+        text = (text_for_embedding or "").strip()
+        if not text:
+            return []
+
+        # simple char-based chunking; adjust if you want sentence-based chunking
+        chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size) if text[i:i+chunk_size].strip()]
+        chunk_embs = []
+        for c in chunks:
+            # _embed_chunk_with_retry will retry on read-timeouts
+            e = self._embed_chunk_with_retry(c)
+
+            # ensure numeric numpy array
+            chunk_embs.append(np.array(e, dtype=float))
+
+        if len(chunk_embs) == 1:
+            return chunk_embs[0].tolist()
+        return np.mean(np.stack(chunk_embs, axis=0), axis=0).tolist()
+
     
     def _generate_summary(self, text: str) -> str:
         """Generate a brief summary of the resume"""
@@ -178,7 +243,8 @@ class ResumeProcessor:
         Summary: {resume_info.get('summary', '')}
         """
         
-        embedding = list(self.model.embed_query(text_for_embedding.strip()))
+        embedding = self._embed_text(text_for_embedding)
+
 
 
         return embedding
@@ -194,7 +260,8 @@ class ResumeProcessor:
         Location: {job_data.get('location', '')}
         """
         
-        embedding = list(self.model.embed_query(text_for_embedding.strip()))
+        embedding = self._embed_text(text_for_embedding)
+
 
 
         return embedding
@@ -219,9 +286,10 @@ class ResumeProcessor:
                     'summary': resume_info.get('summary', '')[:500]  # Limit summary length
                 }
             }])
-            print(f"Resume upserted successfully: {resume_id}")
+            logger.info("Resume upserted successfully: %s", resume_id)
+
         except Exception as e:
-            print(f"Error upserting resume: {e}")
+            logger.exception("Error upserting resume: %s", e)
             raise
         
         return resume_id

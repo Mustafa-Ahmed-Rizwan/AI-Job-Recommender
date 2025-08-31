@@ -308,25 +308,36 @@ export const closeFileUploadModal = () => {
 };
 
 const setupUploadModalHandlers = () => {
+  // Remove existing listeners first to avoid duplicates
   const uploadArea = document.getElementById('upload-modal-area');
   const fileInput = document.getElementById('upload-modal-input') as HTMLInputElement;
   
-  uploadArea?.addEventListener('click', () => fileInput?.click());
-  uploadArea?.addEventListener('dragover', (e) => {
+  if (!uploadArea || !fileInput) return;
+  
+  // Clone and replace to remove all event listeners
+  const newUploadArea = uploadArea.cloneNode(true) as HTMLElement;
+  const newFileInput = fileInput.cloneNode(true) as HTMLInputElement;
+  
+  uploadArea.parentNode?.replaceChild(newUploadArea, uploadArea);
+  fileInput.parentNode?.replaceChild(newFileInput, fileInput);
+  
+  // Now add fresh listeners
+  newUploadArea.addEventListener('click', () => newFileInput.click());
+  newUploadArea.addEventListener('dragover', (e: DragEvent) => {
     e.preventDefault();
-    uploadArea.classList.add('border-primary-400', 'bg-primary-50');
+    newUploadArea.classList.add('border-primary-400', 'bg-primary-50');
   });
-  uploadArea?.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+  newUploadArea.addEventListener('dragleave', () => {
+    newUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
   });
-  uploadArea?.addEventListener('drop', (e) => {
+  newUploadArea.addEventListener('drop', (e: DragEvent) => {
     e.preventDefault();
-    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+    newUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
     const file = e.dataTransfer?.files[0];
     if (file) handleUploadModalFile(file);
   });
   
-  fileInput?.addEventListener('change', (e) => {
+  newFileInput.addEventListener('change', (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) handleUploadModalFile(file);
   });

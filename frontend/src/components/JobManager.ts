@@ -259,29 +259,12 @@ export const sortJobs = (criteria: string) => {
   
   let sortedJobs = [...appState.jobsData];
   
-  switch (criteria) {
-    case 'relevance':
-      sortedJobs.sort((a, b) => {
-        const scoreA = parseFloat(String(a.similarity_score || 0));
-        const scoreB = parseFloat(String(b.similarity_score || 0));
-        return scoreB - scoreA;
-      });
-      break;
-    case 'company':
-      sortedJobs.sort((a, b) => {
-        const companyA = (a.company_name || a.company || '').toLowerCase();
-        const companyB = (b.company_name || b.company || '').toLowerCase();
-        return companyA.localeCompare(companyB);
-      });
-      break;
-    case 'location':
-      sortedJobs.sort((a, b) => {
-        const locationA = (a.location || '').toLowerCase();
-        const locationB = (b.location || '').toLowerCase();
-        return locationA.localeCompare(locationB);
-      });
-      break;
-  }
+  // Only sort by match score (similarity_score)
+  sortedJobs.sort((a, b) => {
+    const scoreA = parseFloat(String(a.similarity_score || 0));
+    const scoreB = parseFloat(String(b.similarity_score || 0));
+    return scoreB - scoreA;
+  });
   
   displayJobs(sortedJobs);
 };
