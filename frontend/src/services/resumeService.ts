@@ -290,13 +290,16 @@ async deleteResume(resumeId: string): Promise<{ success: boolean; message: strin
   }
 
   try {
-    // Instead of deleting, mark as deleted and inactive
-    const updates = {
-      isActive: false,
-      isDeleted: true,
-      lastModified: new Date().toISOString(),
-      deletedAt: new Date().toISOString()
-    };
+  // Force refresh the auth token before delete operation
+  await authService.refreshAuthToken();
+  
+  // Instead of deleting, mark as deleted and inactive
+  const updates = {
+    isActive: false,
+    isDeleted: true,
+    lastModified: new Date().toISOString(),
+    deletedAt: new Date().toISOString()
+  };
 
     await setDoc(doc(db, this.collectionName, resumeId), updates, { merge: true });
 

@@ -66,6 +66,18 @@ class AuthService {
       return null;
     }
   }
+  // Add this method inside the AuthService class
+async refreshAuthToken(): Promise<boolean> {
+  if (!this.currentUser) return false;
+  
+  try {
+    await this.currentUser.getIdToken(true);
+    return true;
+  } catch (error) {
+    console.error('Error refreshing auth token:', error);
+    return false;
+  }
+}
 
   // Sign in with email and password
   async signIn(email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> {

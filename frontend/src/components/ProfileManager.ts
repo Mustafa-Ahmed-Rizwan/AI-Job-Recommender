@@ -401,7 +401,9 @@ export const deleteResumeFromProfile = async () => {
   }
   
   try {
+    await authService.refreshAuthToken();
     const result = await resumeService.deleteResume(appState.resumeId);
+
     if (result.success) {
       appState.profileCompleted = false;
       appState.resumeInfo = null;
