@@ -131,7 +131,21 @@ export const handleSignIn = async (e: Event) => {
     }
   } catch (error: any) {
     console.error('Sign in error:', error);
-    showToast('Invalid email or password. Please try again.', 'error');
+    
+    // Handle specific Firebase authentication errors
+    let errorMessage = 'Invalid email or password. Please try again.';
+    
+    if (error.code === 'auth/invalid-credential') {
+      errorMessage = 'No account found with this email address or incorrect password.';
+    } else if (error.code === 'auth/user-not-found') {
+      errorMessage = 'No account found with this email address.';
+    } else if (error.code === 'auth/wrong-password') {
+      errorMessage = 'Incorrect password.';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Please enter a valid email address.';
+    }
+    
+    showToast(errorMessage, 'error');
     authLoading?.classList.add('hidden');
     signinForm?.classList.remove('hidden');
   }
