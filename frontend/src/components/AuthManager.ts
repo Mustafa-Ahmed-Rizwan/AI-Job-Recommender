@@ -7,10 +7,21 @@ export const showAuthForms = () => {
   document.getElementById('auth-section')?.classList.remove('hidden');
   document.getElementById('main-app')?.classList.add('hidden');
   document.getElementById('view-profile-btn')?.style.setProperty('display', 'none');
+  
+  // Clear user info from header
+  const userInfo = document.getElementById('user-info');
+  if (userInfo) {
+    userInfo.textContent = '';
+  }
+  
+  // Hide any loading states
+  const authLoading = document.getElementById('auth-loading');
+  authLoading?.classList.add('hidden');
+  
   showSignInForm();
 };
 
-export const showMainApp = () => {
+export const showMainApp = async () => {
   document.getElementById('auth-section')?.classList.add('hidden');
   document.getElementById('main-app')?.classList.remove('hidden');
   document.getElementById('view-profile-btn')?.style.setProperty('display', 'block');
@@ -21,7 +32,10 @@ export const showMainApp = () => {
     userInfo.textContent = `Welcome, ${user.email}`;
   }
   
-  checkFirstTimeUser();
+  // Add a small delay to allow Firebase to sync
+  setTimeout(async () => {
+    await checkFirstTimeUser();
+  }, 1000); // 1 second delay
 };
 
 export const clearAllAuthForms = () => {
@@ -92,24 +106,32 @@ export const handleSignIn = async (e: Event) => {
   const email = (document.getElementById('signin-email') as HTMLInputElement).value;
   const password = (document.getElementById('signin-password') as HTMLInputElement).value;
   
+  if (!email || !password) {
+    showToast('Please fill in all fields.', 'error');
+    return;
+  }
+  
   const authLoading = document.getElementById('auth-loading');
   const signinForm = document.getElementById('signin-form');
   
+  authLoading?.classList.remove('hidden');
+  signinForm?.classList.add('hidden');
+  
   try {
-    authLoading?.classList.remove('hidden');
-    signinForm?.classList.add('hidden');
-    
     const result = await authService.signIn(email, password);
     
     if (result.success) {
       showToast('Signed in successfully!');
       showMainApp();
     } else {
+      // Show error and restore form
       showToast(result.message, 'error');
+      authLoading?.classList.add('hidden');
+      signinForm?.classList.remove('hidden');
     }
-  } catch (error) {
-    showToast('Sign in failed. Please try again.', 'error');
-  } finally {
+  } catch (error: any) {
+    console.error('Sign in error:', error);
+    showToast('Invalid email or password. Please try again.', 'error');
     authLoading?.classList.add('hidden');
     signinForm?.classList.remove('hidden');
   }
@@ -151,16 +173,23 @@ export const handleLogout = async () => {
   try {
     const result = await authService.logout();
     if (result.success) {
+      // Clear user info immediately
+      const userInfo = document.getElementById('user-info');
+      if (userInfo) {
+        userInfo.textContent = '';
+      }
+      
       showToast('Signed out successfully!');
       clearAllAuthForms();
-      showAuthForms();
       resetApplication();
+      showAuthForms(); // This will now clear user info
     } else {
       showToast(result.message, 'error');
     }
   } catch (error) {
     showToast('Logout failed. Please try again.', 'error');
   }
+  // Remove the finally block that was showing loading states
 };
 
 const resetApplication = () => {

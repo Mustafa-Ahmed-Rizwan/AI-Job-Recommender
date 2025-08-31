@@ -141,24 +141,31 @@
         .slide-up {
             animation: slideUp 0.3s ease-out;
         }
-        
-        .hidden { display: none !important; }
+        .hidden {
+            display: none !important;
+        }
 
         .tab-content {
             display: block;
         }
 
-        .tab-content.hidden {
-            display: none !important;
+        input[type="email"],
+        input[type="password"],
+        input[type="text"] {
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        width: 100%;
+        outline: none; /* removes the default browser outline */
         }
 
-        input[type="email"], input[type="password"], input[type="text"] {
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            padding: 0.5rem 0.75rem;
-            width: 100%;
-            focus: outline-none;
+        input[type="email"]:focus,
+        input[type="password"]:focus,
+        input[type="text"]:focus {
+        border-color: #2563eb; /* change border color on focus */
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3); /* adds subtle glow */
         }
+
 
         input[type="email"]:focus, input[type="password"]:focus, input[type="text"]:focus {
             border-color: var(--primary-500);
@@ -468,12 +475,21 @@
                                         <span>AI Job Suggestions</span>
                                     </h3>
                                     <p class="text-sm text-gray-600 mt-1">Based on your resume and skills</p>
+
+                                    <!-- ADD THIS LINE: -->
+                                    <div id="no-profile-suggestions" class="text-center py-4">
+                                        <p class="text-sm text-gray-600">Please complete your profile first to get AI suggestions</p>
+                                    </div>
+
+                                    <!-- Then continue with the rest of your existing code -->
+                                    <p class="text-sm text-gray-600 mt-1">Based on your resume and skills</p>
                                 </div>
                                 <button id="get-suggestions-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2">
                                     <i data-lucide="sparkles" class="w-4 h-4"></i>
                                     <span>Get Suggestions</span>
                                 </button>
                             </div>
+
                             
                             <div id="suggestions-loading" class="hidden text-center py-8">
                                 <div class="w-6 h-6 loading-spinner mx-auto mb-2">
@@ -648,8 +664,9 @@
             </main>
 
             <!-- Profile Page Modal -->
-            <div id="profile-page-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div id="profile-page-modal" class="hidden">
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                     <!-- Profile Header -->
                     <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
                         <div class="flex items-center justify-between">
@@ -659,6 +676,7 @@
                             </button>
                         </div>
                     </div>
+                    
                     
                     <!-- Profile Content -->
                     <div class="p-6">
@@ -770,46 +788,48 @@
             </div>
 
             <!-- File Upload Modal -->
-            <div id="file-upload-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-xl font-semibold text-gray-900">Upload Resume</h3>
-                        <button id="close-upload-modal" class="p-1 text-gray-400 hover:text-gray-600">
-                            <i data-lucide="x" class="w-5 h-5"></i>
-                        </button>
+            <div id="file-upload-modal" class="hidden">
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-gray-900">Upload Resume</h3>
+                <button id="close-upload-modal" class="p-1 text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div id="upload-modal-area" class="profile-upload-area">
+                <div class="space-y-4">
+                    <div class="mx-auto w-12 h-12 text-gray-400">
+                        <i data-lucide="upload" class="w-12 h-12"></i>
                     </div>
-                    
-                    <div id="upload-modal-area" class="profile-upload-area">
-                        <div class="space-y-4">
-                            <div class="mx-auto w-12 h-12 text-gray-400">
-                                <i data-lucide="upload" class="w-12 h-12"></i>
-                            </div>
-                            <div>
-                                <p class="text-lg font-medium text-gray-900">Drop your resume here, or <span class="text-primary-600">browse</span></p>
-                                <p class="text-sm text-gray-500 mt-1">Support for PDF and DOCX files up to 10MB</p>
-                            </div>
+                    <div>
+                        <p class="text-lg font-medium text-gray-900">Drop your resume here, or <span class="text-primary-600">browse</span></p>
+                        <p class="text-sm text-gray-500 mt-1">Support for PDF and DOCX files up to 10MB</p>
+                    </div>
+                </div>
+                <input type="file" id="upload-modal-input" accept=".pdf,.docx" class="hidden">
+            </div>
+            
+            <div id="upload-modal-progress" class="hidden mt-6">
+                <div class="flex items-center space-x-3">
+                    <div class="w-6 h-6 loading-spinner">
+                        <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-700">Processing resume...</span>
+                            <span class="text-gray-500">Please wait</span>
                         </div>
-                        <input type="file" id="upload-modal-input" accept=".pdf,.docx" class="hidden">
-                    </div>
-                    
-                    <div id="upload-modal-progress" class="hidden mt-6">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-6 h-6 loading-spinner">
-                                <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-gray-700">Processing resume...</span>
-                                    <span class="text-gray-500">Please wait</span>
-                                </div>
-                                <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
-                                    <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
-                                </div>
-                            </div>
+                        <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
             <!-- Toast Notifications -->
             <div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50"></div>

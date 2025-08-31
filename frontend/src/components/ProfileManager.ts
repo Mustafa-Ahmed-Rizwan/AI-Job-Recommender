@@ -308,36 +308,25 @@ export const closeFileUploadModal = () => {
 };
 
 const setupUploadModalHandlers = () => {
-  // Remove existing listeners first to avoid duplicates
   const uploadArea = document.getElementById('upload-modal-area');
   const fileInput = document.getElementById('upload-modal-input') as HTMLInputElement;
   
-  if (!uploadArea || !fileInput) return;
-  
-  // Clone and replace to remove all event listeners
-  const newUploadArea = uploadArea.cloneNode(true) as HTMLElement;
-  const newFileInput = fileInput.cloneNode(true) as HTMLInputElement;
-  
-  uploadArea.parentNode?.replaceChild(newUploadArea, uploadArea);
-  fileInput.parentNode?.replaceChild(newFileInput, fileInput);
-  
-  // Now add fresh listeners
-  newUploadArea.addEventListener('click', () => newFileInput.click());
-  newUploadArea.addEventListener('dragover', (e: DragEvent) => {
+  uploadArea?.addEventListener('click', () => fileInput?.click());
+  uploadArea?.addEventListener('dragover', (e) => {
     e.preventDefault();
-    newUploadArea.classList.add('border-primary-400', 'bg-primary-50');
+    uploadArea.classList.add('border-primary-400', 'bg-primary-50');
   });
-  newUploadArea.addEventListener('dragleave', () => {
-    newUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+  uploadArea?.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
   });
-  newUploadArea.addEventListener('drop', (e: DragEvent) => {
+  uploadArea?.addEventListener('drop', (e) => {
     e.preventDefault();
-    newUploadArea.classList.remove('border-primary-400', 'bg-primary-50');
+    uploadArea.classList.remove('border-primary-400', 'bg-primary-50');
     const file = e.dataTransfer?.files[0];
     if (file) handleUploadModalFile(file);
   });
   
-  newFileInput.addEventListener('change', (e) => {
+  fileInput?.addEventListener('change', (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) handleUploadModalFile(file);
   });
@@ -412,9 +401,7 @@ export const deleteResumeFromProfile = async () => {
   }
   
   try {
-    await authService.refreshAuthToken();
     const result = await resumeService.deleteResume(appState.resumeId);
-
     if (result.success) {
       appState.profileCompleted = false;
       appState.resumeInfo = null;
@@ -430,10 +417,29 @@ export const deleteResumeFromProfile = async () => {
   }
 };
 
-export const checkFirstTimeUser = async () => {
+export const checkFirstTimeUser = async (retryCount = 0) => {
+  const maxRetries = 3;
+  
   try {
+    const user = authService.getCurrentUser();
+    if (!user) {
+      showProfileCompletionModal();
+      return;
+    }
+
     const userProfile = await authService.getUserProfile();
     const latestResume = await resumeService.getLatestResume();
+    
+    // Clear previous user's data first
+    appState.reset();
+    
+    // If we get null profile data and haven't retried much, wait and retry
+    if (!userProfile && retryCount < maxRetries) {
+      setTimeout(() => {
+        checkFirstTimeUser(retryCount + 1);
+      }, 1500); // Wait 1.5 seconds before retry
+      return;
+    }
     
     if (!userProfile?.profileCompleted || !latestResume.success || !latestResume.resume) {
       showProfileCompletionModal();
@@ -448,7 +454,13 @@ export const checkFirstTimeUser = async () => {
     }
   } catch (error) {
     console.error('Error checking first time user:', error);
-    showProfileCompletionModal();
+    if (retryCount < maxRetries) {
+      setTimeout(() => {
+        checkFirstTimeUser(retryCount + 1);
+      }, 1500);
+    } else {
+      showProfileCompletionModal();
+    }
   }
 };
 

@@ -81,30 +81,34 @@ async refreshAuthToken(): Promise<boolean> {
 
   // Sign in with email and password
   async signIn(email: string, password: string): Promise<{ success: boolean; message: string; user?: User }> {
+  try {
+    this.isSignUpFlow = false;
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    // Update last login in Firestore with retry logic
     try {
-      this.isSignUpFlow = false;
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Update last login in Firestore
       await this.updateUserProfile(user.uid, { 
         lastLogin: new Date().toISOString() 
       });
-      
-      return {
-        success: true,
-        message: 'Signed in successfully',
-        user
-      };
-    } catch (error: any) {
-      console.error('Sign in error:', error);
-      return {
-        success: false,
-        message: this.getAuthErrorMessage(error.code)
-      };
+    } catch (firestoreError) {
+      console.warn('Firestore update failed, but sign-in successful:', firestoreError);
+      // Don't fail the sign-in for this
     }
+    
+    return {
+      success: true,
+      message: 'Signed in successfully',
+      user
+    };
+  } catch (error: any) {
+    console.error('Sign in error:', error);
+    return {
+      success: false,
+      message: this.getAuthErrorMessage(error.code)
+    };
   }
-
+}
   // Sign up with email and password
   async signUp(email: string, password: string, displayName?: string): Promise<{ success: boolean; message: string; user?: User }> {
     try {
@@ -304,15 +308,17 @@ async removeResumeFromProfile(): Promise<boolean> {
   private getAuthErrorMessage(errorCode: string): string {
     switch (errorCode) {
       case 'auth/user-not-found':
-        return 'No user found with this email address.';
+      return 'No account found with this email address.';
       case 'auth/wrong-password':
-        return 'Incorrect password.';
+      return 'Incorrect password.';
       case 'auth/email-already-in-use':
         return 'An account with this email already exists.';
       case 'auth/weak-password':
         return 'Password should be at least 6 characters.';
       case 'auth/invalid-email':
-        return 'Invalid email address.';
+      return 'Please enter a valid email address.';
+      case 'auth/missing-password':
+      return 'Please enter your password.';
       case 'auth/too-many-requests':
         return 'Too many failed attempts. Please try again later.';
       case 'auth/network-request-failed':
@@ -321,6 +327,8 @@ async removeResumeFromProfile(): Promise<boolean> {
         return 'This account has been disabled.';
       case 'auth/operation-not-allowed':
         return 'Email/password accounts are not enabled.';
+        case 'auth/invalid-credential':
+      return 'Invalid email or password.';
       default:
         console.log('Unknown auth error:', errorCode);
         return 'An error occurred. Please try again.';

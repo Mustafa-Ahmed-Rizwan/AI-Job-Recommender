@@ -140,30 +140,7 @@ const setupEventListeners = () => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) handleProfileFileUpload(file);
   });
-  // File upload modal listeners (ADD THESE)
-  const uploadModalArea = document.getElementById('upload-modal-area');
-  const uploadModalInput = document.getElementById('upload-modal-input') as HTMLInputElement;
   
-  uploadModalArea?.addEventListener('click', () => uploadModalInput?.click());
-  uploadModalArea?.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadModalArea.classList.add('border-primary-400', 'bg-primary-50');
-  });
-  uploadModalArea?.addEventListener('dragleave', () => {
-    uploadModalArea.classList.remove('border-primary-400', 'bg-primary-50');
-  });
-  uploadModalArea?.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadModalArea.classList.remove('border-primary-400', 'bg-primary-50');
-    const file = e.dataTransfer?.files[0];
-    if (file) handleProfileFileUpload(file);
-  });
-  
-  uploadModalInput?.addEventListener('change', (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) handleProfileFileUpload(file);
-  });
-
   
   // Country/city selection
   document.getElementById('country-select')?.addEventListener('change', async (e) => {

@@ -1,5 +1,7 @@
 // frontend/src/services/resumeService.ts
+
 import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
+
 import { db } from '../config/firebase.js';
 import { authService } from './authService';
 import type { ResumeInfo } from '../types';
@@ -276,48 +278,41 @@ async getActiveResume(): Promise<{ success: boolean; resume?: ResumeRecord; mess
     }
   }
 
-  // Delete resume
-  // Delete resume
-// Delete resume
+  // Delete resume (hard delete)
 async deleteResume(resumeId: string): Promise<{ success: boolean; message: string }> {
   const user = authService.getCurrentUser();
-  
   if (!user) {
-    return {
-      success: false,
-      message: 'User not authenticated'
-    };
+    return { success: false, message: 'User not authenticated' };
   }
 
   try {
-  // Force refresh the auth token before delete operation
-  await authService.refreshAuthToken();
-  
-  // Instead of deleting, mark as deleted and inactive
-  const updates = {
-    isActive: false,
-    isDeleted: true,
-    lastModified: new Date().toISOString(),
-    deletedAt: new Date().toISOString()
-  };
+    const refreshed = await authService.refreshAuthToken();
+    if (!refreshed) {
+      return { success: false, message: 'Failed to refresh auth token. Please sign in again.' };
+    }
 
-    await setDoc(doc(db, this.collectionName, resumeId), updates, { merge: true });
+    const docRef = doc(db, this.collectionName, resumeId);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      return { success: false, message: 'Resume not found' };
+    }
+    const resumeData = docSnap.data() as any;
+    if (resumeData.userId !== user.uid) {
+      return { success: false, message: 'Unauthorized to delete this resume' };
+    }
 
-    // Update auth service profile status
+    // 🔥 Actually delete the document
+    await deleteDoc(docRef);
+
     await authService.removeResumeFromProfile();
 
-    return {
-      success: true,
-      message: 'Resume deleted successfully'
-    };
+    return { success: true, message: 'Resume deleted successfully' };
   } catch (error: any) {
     console.error('Error deleting resume:', error);
-    return {
-      success: false,
-      message: 'Failed to delete resume'
-    };
+    return { success: false, message: 'Failed to delete resume' };
   }
 }
+
 
   // Get latest resume for user (alias for getActiveResume for backward compatibility)
   async getLatestResume(): Promise<{ success: boolean; resume?: ResumeRecord; message: string }> {
