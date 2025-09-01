@@ -1,7 +1,7 @@
 // frontend/src/config/firebase.js
-import { initializeApp } from "firebase/app";   // ✅ this was missing
-import { initializeFirestore } from "firebase/firestore";
+import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // Firebase configuration from .env
 const firebaseConfig = {
@@ -18,6 +18,6 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase services
 export const auth = getAuth(app);
-export const db = initializeFirestore(app, { experimentalForceLongPolling: true });
+export const db = getFirestore(app);
 
 export default app;

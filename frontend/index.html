@@ -1,3 +1,4 @@
+<!-- frontend/sc/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,243 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <style>
-        :root {
-            --primary-50: #f0f9ff;
-            --primary-100: #e0f2fe;
-            --primary-200: #bae6fd;
-            --primary-300: #7dd3fc;
-            --primary-400: #38bdf8;
-            --primary-500: #0ea5e9;
-            --primary-600: #0284c7;
-            --primary-700: #0369a1;
-            --primary-800: #075985;
-            --primary-900: #0c4a6e;
-        }
-        
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        .shadow-soft {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        }
-        
-        .bg-primary-50 { background-color: var(--primary-50); }
-        .bg-primary-100 { background-color: var(--primary-100); }
-        .bg-primary-600 { background-color: var(--primary-600); }
-        .bg-primary-700 { background-color: var(--primary-700); }
-        .text-primary-600 { color: var(--primary-600); }
-        .text-primary-700 { color: var(--primary-700); }
-        .border-primary-400 { border-color: var(--primary-400); }
-        .border-primary-500 { border-color: var(--primary-500); }
-        .ring-primary-500 { --tw-ring-color: var(--primary-500); }
-        .hover\:bg-primary-700:hover { background-color: var(--primary-700); }
-        .focus\:ring-primary-500:focus { --tw-ring-color: var(--primary-500); }
-        .focus\:border-primary-500:focus { border-color: var(--primary-500); }
-        
-        .skill-tag {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            background-color: var(--primary-100);
-            color: var(--primary-700);
-            font-size: 0.75rem;
-            font-weight: 500;
-            border-radius: 9999px;
-            margin: 0.125rem;
-        }
-        
-        .job-card {
-            background: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            padding: 1.5rem;
-            border: 1px solid #e5e7eb;
-            transition: all 0.2s ease;
-        }
-        
-        .job-card:hover {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            transform: translateY(-1px);
-        }
-        
-        .match-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        #main-app.show {
-    display: block !important;
-}
-        #toast-container {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 9999;
-            pointer-events: none;
-        }
-
-        .toast {
-            pointer-events: auto;
-            margin-bottom: 0.5rem;
-        }
-
-        .opacity-50 {
-            opacity: 0.5;
-        }
-        #auth-section {
-    display: flex;
-}
-
-       #main-app {
-    display: none;
-}
-
-        .app-loading {
-        position: fixed;
-        inset: 0;
-        background: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        }
-
-        .cursor-not-allowed {
-            cursor: not-allowed;
-        }
-
-        /* Enhanced button states */
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        button:disabled:hover {
-            background-color: inherit;
-        }
-
-        /* Better error states */
-        .border-red-300 {
-            border-color: #fca5a5;
-        }
-
-        .text-red-600 {
-            color: #dc2626;
-        }
-
-        .bg-red-50 {
-            background-color: #fef2f2;
-        }
-        
-        .match-excellent {
-            background-color: #dcfce7;
-            color: #166534;
-        }
-        
-        .match-good {
-            background-color: #fef3c7;
-            color: #92400e;
-        }
-        
-        .match-potential {
-            background-color: #dbeafe;
-            color: #1e40af;
-        }
-        
-        .job-description-container {
-            margin-top: 1rem;
-        }
-        
-        .job-description-preview, .job-description-full {
-            font-size: 0.875rem;
-            line-height: 1.6;
-            color: #374151;
-            margin-bottom: 0.75rem;
-        }
-        
-        .job-description-toggle {
-            color: var(--primary-600);
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-            background: none;
-            text-decoration: underline;
-        }
-        
-        .job-description-toggle:hover {
-            color: var(--primary-700);
-        }
-        
-        .toast {
-            background: white;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e5e7eb;
-            min-width: 300px;
-            z-index: 1000;
-        }
-        
-        .toast.success {
-            border-left: 4px solid #10b981;
-        }
-        
-        .toast.error {
-            border-left: 4px solid #ef4444;
-        }
-        
-        .toast.warning {
-            border-left: 4px solid #f59e0b;
-        }
-        
-        .slide-up {
-            animation: slideUp 0.3s ease-out;
-        }
-        .hidden {
-            display: none !important;
-        }
-
-        .tab-content {
-            display: block;
-        }
-
-        input[type="email"],
-        input[type="password"],
-        input[type="text"] {
-        border: 1px solid #d1d5db;
-        border-radius: 0.5rem;
-        padding: 0.5rem 0.75rem;
-        width: 100%;
-        outline: none; /* removes the default browser outline */
-        }
-
-        input[type="email"]:focus,
-        input[type="password"]:focus,
-        input[type="text"]:focus {
-        border-color: #2563eb; /* change border color on focus */
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3); /* adds subtle glow */
-        }
-
-
-        input[type="email"]:focus, input[type="password"]:focus, input[type="text"]:focus {
-            border-color: var(--primary-500);
-            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
-        }
-        
-        @keyframes slideUp {
-            from {
-                transform: translateY(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-        
         .loading-spinner {
             animation: spin 1s linear infinite;
         }
@@ -267,660 +31,504 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        
-        .tab-nav-button {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-        }
-        
-        .tab-nav-button.active {
-            background-color: var(--primary-600);
-            color: white;
-        }
-        
-        .tab-nav-button:not(.active) {
-            color: #6b7280;
-            background-color: white;
-            border-color: #e5e7eb;
-        }
-        
-        .tab-nav-button:not(.active):hover {
-            background-color: #f9fafb;
-            color: #374151;
-        }
-        
-        .profile-upload-area {
-            border: 2px dashed #d1d5db;
-            border-radius: 0.75rem;
-            padding: 3rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .profile-upload-area:hover {
-            border-color: var(--primary-400);
-            background-color: var(--primary-50);
-        }
-        
-        .profile-upload-area.dragover {
-            border-color: var(--primary-400);
-            background-color: var(--primary-50);
-        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
     <div id="app">
-        <div id="app-loading" class="app-loading">
-            <div class="text-center">
-                <div class="w-8 h-8 loading-spinner mx-auto mb-4">
-                <i data-lucide="loader" class="w-8 h-8 text-primary-600"></i>
-                </div>
-                <p class="text-gray-600">Loading...</p>
-            </div>
-            </div>
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                            <i data-lucide="target" class="w-5 h-5 text-white"></i>
-                        </div>
-                        <h1 class="text-xl font-semibold text-gray-900">AI Job Recommender</h1>
-                    </div>
-                    
-                    <div class="flex items-center space-x-4">
-                        <div id="api-status" class="flex items-center space-x-2">
-                            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-                            <span class="text-sm text-gray-600">Checking API...</span>
-                        </div>
-                        
-                        <div class="flex items-center space-x-4">
-                            <button id="view-profile-btn" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-1">
-                                <i data-lucide="user" class="w-4 h-4"></i>
-                                <span>View Profile</span>
-                            </button>
-                            <div id="user-info" class="text-sm text-gray-600"></div>
-                            <button id="logout-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
-                                <i data-lucide="log-out" class="w-4 h-4"></i>
-                            </button>
-                            <button id="reset-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
-                                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                <i data-lucide="target" class="w-5 h-5 text-white"></i>
                 </div>
+                <h1 class="text-xl font-semibold text-gray-900">AI Job Recommender</h1>
             </div>
-        </header>
+            
+            <div class="flex items-center space-x-4">
+                <div id="api-status" class="flex items-center space-x-2">
+                <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                <span class="text-sm text-gray-600">Checking API...</span>
+                </div>
+                
+                
+                
+                <div class="flex items-center space-x-4">
+                <div id="user-info" class="text-sm text-gray-600"></div>
+                <button id="logout-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+                <button id="reset-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+                </div>
 
+            </div>
+            </div>
+        </div>
+</header>
         <!-- Authentication Section -->
         <div id="auth-section" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-            <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-                <div class="text-center mb-8">
-                    <div class="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                        <i data-lucide="user" class="w-6 h-6 text-white"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold text-gray-900">Welcome to AI Job Recommender</h2>
-                    <p class="text-gray-600 mt-2">Sign in to get personalized job recommendations</p>
-                </div>
-
-                <!-- Sign In Form -->
-                <div id="signin-form">
-                    <form id="signin-form-element" class="space-y-4">
-                        <div>
-                            <label for="signin-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                            <input type="email" id="signin-email" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="your@email.com">
-                        </div>
-                        <div>
-                            <label for="signin-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                            <input type="password" id="signin-password" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="Your password">
-                        </div>
-                        <button type="submit" 
-                                class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                            Sign In
-                        </button>
-                    </form>
-                    
-                    <div class="mt-6 text-center">
-                        <p class="text-sm text-gray-600">
-                            Don't have an account? 
-                            <button onclick="showSignUpForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign up</button>
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Sign Up Form -->
-                <div id="signup-form" class="hidden">
-                    <form id="signup-form-element" class="space-y-4">
-                        <div>
-                            <label for="signup-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                            <input type="email" id="signup-email" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="your@email.com">
-                        </div>
-                        <div>
-                            <label for="signup-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                            <input type="password" id="signup-password" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="At least 6 characters">
-                        </div>
-                        <div>
-                            <label for="signup-name" class="block text-sm font-medium text-gray-700 mb-2">Full Name (Optional)</label>
-                            <input type="text" id="signup-name"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                                    placeholder="Your full name">
-                        </div>
-                        <button type="submit" 
-                                class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                            Create Account
-                        </button>
-                    </form>
-                    
-                    <div class="mt-6 text-center">
-                        <p class="text-sm text-gray-600">
-                            Already have an account? 
-                            <button onclick="showSignInForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign in</button>
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Loading -->
-                <div id="auth-loading" class="hidden text-center">
-                    <div class="w-6 h-6 loading-spinner mx-auto mb-2">
-                        <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
-                    </div>
-                    <p class="text-sm text-gray-600">Please wait...</p>
-                </div>
+        <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+            <div class="text-center mb-8">
+            <div class="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="user" class="w-6 h-6 text-white"></i>
             </div>
+            <h2 class="text-2xl font-bold text-gray-900">Welcome to AI Job Recommender</h2>
+            <p class="text-gray-600 mt-2">Sign in to get personalized job recommendations</p>
+            </div>
+
+            <!-- Sign In Form -->
+            <div id="signin-form">
+            <form id="signin-form-element" class="space-y-4">
+                <div>
+                <label for="signin-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input type="email" id="signin-email" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="your@email.com">
+                </div>
+                <div>
+                <label for="signin-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input type="password" id="signin-password" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="Your password">
+                </div>
+                <button type="submit" 
+                        class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                Sign In
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                Don't have an account? 
+                <button onclick="showSignUpForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign up</button>
+                </p>
+            </div>
+            </div>
+
+            <!-- Sign Up Form -->
+            <div id="signup-form" class="hidden">
+            <form id="signup-form-element" class="space-y-4">
+                <div>
+                <label for="signup-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input type="email" id="signup-email" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="your@email.com">
+                </div>
+                <div>
+                <label for="signup-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input type="password" id="signup-password" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="At least 6 characters">
+                </div>
+                <div>
+                <label for="signup-name" class="block text-sm font-medium text-gray-700 mb-2">Full Name (Optional)</label>
+                <input type="text" id="signup-name"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="Your full name">
+                </div>
+                <button type="submit" 
+                        class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                Create Account
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-sm text-gray-600">
+                Already have an account? 
+                <button onclick="showSignInForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign in</button>
+                </p>
+            </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="auth-loading" class="hidden text-center">
+            <div class="w-6 h-6 loading-spinner mx-auto mb-2">
+                <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+            </div>
+            <p class="text-sm text-gray-600">Please wait...</p>
+            </div>
+        </div>
         </div>
 
         <!-- Main App Container -->
         <div id="main-app" class="hidden">
-            <!-- Progress Indicator -->
-            <div class="bg-white border-b border-gray-200">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex items-center space-x-8 py-4">
-                        <div id="step-search" class="flex items-center space-x-2 step-indicator">
-                            <div class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-medium">1</div>
-                            <span class="text-sm font-medium text-primary-600">Find Jobs</span>
-                        </div>
-                        <div class="w-8 h-0.5 bg-gray-200"></div>
-                        <div id="step-analysis" class="flex items-center space-x-2 step-indicator">
-                            <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">2</div>
-                            <span class="text-sm text-gray-500">Analysis</span>
-                        </div>
-                        <div class="w-8 h-0.5 bg-gray-200"></div>
-                        <div id="step-report" class="flex items-center space-x-2 step-indicator">
-                            <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">3</div>
-                            <span class="text-sm text-gray-500">Report</span>
-                        </div>
-                    </div>
-                </div>
+
+        <!-- Progress Indicator -->
+        <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center space-x-8 py-4">
+            <div id="step-search" class="flex items-center space-x-2 step-indicator active">
+                <div class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-medium">1</div>
+                <span class="text-sm font-medium text-primary-600">Find Jobs</span>
             </div>
-
-            <!-- Tab Navigation -->
-            <div class="bg-white border-b border-gray-200">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex space-x-1 py-4">
-                        <button id="tab-search-btn" class="tab-nav-button active">
-                            <i data-lucide="search" class="w-4 h-4 inline mr-2"></i>
-                            Find Jobs
-                        </button>
-                        <button id="tab-analysis-btn" class="tab-nav-button">
-                            <i data-lucide="brain" class="w-4 h-4 inline mr-2"></i>
-                            Analysis
-                        </button>
-                        <button id="tab-report-btn" class="tab-nav-button">
-                            <i data-lucide="file-text" class="w-4 h-4 inline mr-2"></i>
-                            Report
-                        </button>
-                    </div>
-                </div>
+            <div class="w-8 h-0.5 bg-gray-200"></div>
+            <div id="step-analysis" class="flex items-center space-x-2 step-indicator">
+                <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">2</div>
+                <span class="text-sm text-gray-500">Analysis</span>
             </div>
-
-            <!-- Main Content -->
-            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <!-- Job Search Tab -->
-                <div id="tab-search" class="tab-content">
-                    <div class="max-w-6xl mx-auto">
-                        <div class="text-center mb-8">
-                            <h2 class="text-3xl font-bold text-gray-900 mb-4">Find Relevant Jobs</h2>
-                            <p class="text-lg text-gray-600">Search for positions that match your profile</p>
-                        </div>
-
-                        <!-- Search Form -->
-                        <div class="bg-white rounded-xl shadow-soft p-6 mb-8">
-                            <div class="grid md:grid-cols-3 gap-4">
-                                <div class="md:col-span-2">
-                                    <label for="job-query" class="block text-sm font-medium text-gray-700 mb-2">Job Title / Keywords</label>
-                                    <input type="text" id="job-query" placeholder="e.g., Software Engineer, Data Scientist, Product Manager" 
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                                    <div class="space-y-2">
-                                        <select id="country-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                                            <option value="Pakistan">Pakistan</option>
-                                            <option value="India">India</option>
-                                            <option value="USA">USA</option>
-                                        </select>
-                                        <select id="city-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" disabled>
-                                            <option value="">Select City (Optional)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center justify-between mt-6">
-                                <div class="flex items-center space-x-4">
-                                    <label for="num-jobs" class="text-sm font-medium text-gray-700">Number of jobs:</label>
-                                    <select id="num-jobs" class="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                        <option value="10">10</option>
-                                        <option value="20" selected>20</option>
-                                        <option value="30">30</option>
-                                        <option value="50">50</option>
-                                    </select>
-                                </div>
-                                <button id="search-jobs-btn" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center space-x-2">
-                                    <i data-lucide="search" class="w-4 h-4"></i>
-                                    <span>Search Jobs</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Suggested Jobs -->
-                        <!-- Replace the entire suggested-jobs section in your index.html with this: -->
-                        <div id="suggested-jobs" class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 mb-8">
-                            <div class="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                                        <i data-lucide="lightbulb" class="w-5 h-5 text-blue-600"></i>
-                                        <span>AI Job Suggestions</span>
-                                    </h3>
-                                    <p class="text-sm text-gray-600 mt-1">Based on your resume and skills</p>
-                                </div>
-                                <button id="get-suggestions-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <i data-lucide="sparkles" class="w-4 h-4"></i>
-                                    <span>Get Suggestions</span>
-                                </button>
-                            </div>
-
-                            <!-- No Profile State -->
-                            <div id="no-profile-suggestions" class="text-center py-4">
-                                <p class="text-sm text-gray-600">Please complete your profile first to get AI suggestions</p>
-                            </div>
-                            
-                            <!-- Loading State -->
-                            <div id="suggestions-loading" class="hidden text-center py-8">
-                                <div class="w-6 h-6 loading-spinner mx-auto mb-2">
-                                    <i data-lucide="loader" class="w-6 h-6 text-blue-600"></i>
-                                </div>
-                                <p class="text-sm text-gray-600">AI is analyzing your profile...</p>
-                            </div>
-                            
-                            <!-- Suggestions Content -->
-                            <div id="suggestions-content" class="hidden">
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="suggestions-grid">
-                                    <!-- Suggestions will be populated here -->
-                                </div>
-                                <p class="text-xs text-gray-500 mt-3 text-center">Click any suggestion to search for those jobs</p>
-                            </div>
-                        </div>
-                        <!-- Search Loading -->
-                        <div id="search-loading" class="hidden bg-white rounded-xl shadow-soft p-8 text-center">
-                            <div class="w-8 h-8 loading-spinner mx-auto mb-4">
-                                <i data-lucide="loader" class="w-8 h-8 text-primary-600"></i>
-                            </div>
-                            <p class="text-gray-600">Searching for jobs and analyzing matches...</p>
-                        </div>
-
-                        <!-- Job Results -->
-                        <div id="job-results" class="hidden">
-                            <div class="flex items-center justify-between mb-6">
-                                <h3 id="results-title" class="text-2xl font-bold text-gray-900">Found Jobs</h3>
-                                <div class="flex items-center space-x-4">
-                                    <select id="sort-jobs" class="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                        <option value="match">Sort by Match Score</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div id="jobs-container" class="space-y-4"></div>
-
-                            <div class="mt-8 flex justify-center">
-                                <button id="continue-to-analysis" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                                    Continue to Analysis
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Analysis Tab -->
-                <div id="tab-analysis" class="tab-content hidden">
-                    <div class="max-w-6xl mx-auto">
-                        <div class="text-center mb-8">
-                            <h2 class="text-3xl font-bold text-gray-900 mb-4">Skill Gap Analysis</h2>
-                            <p class="text-lg text-gray-600">AI-powered analysis of your skills vs job requirements</p>
-                        </div>
-
-                        <!-- Analysis Control -->
-                        <div class="bg-white rounded-xl shadow-soft p-6 mb-8 text-center">
-                            <p class="text-gray-600 mb-4">Analyze your profile against the top matching jobs to identify skill gaps and opportunities.</p>
-                            <button id="start-analysis-btn" class="px-8 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center space-x-2 mx-auto">
-                                <i data-lucide="brain" class="w-5 h-5"></i>
-                                <span>Start AI Analysis</span>
-                            </button>
-                        </div>
-
-                        <!-- Analysis Loading -->
-                        <div id="analysis-loading" class="hidden bg-white rounded-xl shadow-soft p-12 text-center">
-                            <div class="w-12 h-12 loading-spinner mx-auto mb-6">
-                                <i data-lucide="loader" class="w-12 h-12 text-primary-600"></i>
-                            </div>
-                            <h3 class="text-xl font-semibold text-gray-900 mb-2">Analyzing Skills</h3>
-                            <p class="text-gray-600 mb-4">AI is comparing your profile with job requirements...</p>
-                            <div class="max-w-xs mx-auto bg-gray-200 rounded-full h-2">
-                                <div id="analysis-progress" class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
-                            </div>
-                        </div>
-
-                        <!-- Analysis Results -->
-                        <div id="analysis-results" class="hidden space-y-8">
-                            <div id="analysis-tabs" class="border-b border-gray-200">
-                                <nav class="flex space-x-8" aria-label="Analysis tabs">
-                                    <!-- Analysis tabs will be generated dynamically -->
-                                </nav>
-                            </div>
-
-                            <div id="analysis-content">
-                                <!-- Analysis content will be generated dynamically -->
-                            </div>
-
-                            <div class="flex justify-center">
-                                <button id="continue-to-report" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                                    Generate Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Report Tab -->
-                <div id="tab-report" class="tab-content hidden">
-                    <div class="max-w-6xl mx-auto">
-                        <div class="text-center mb-8">
-                            <h2 class="text-3xl font-bold text-gray-900 mb-4">Comprehensive Report</h2>
-                            <p class="text-lg text-gray-600">Complete analysis and actionable recommendations</p>
-                        </div>
-
-                        <!-- Report Loading -->
-                        <div id="report-loading" class="hidden bg-white rounded-xl shadow-soft p-8 text-center">
-                            <div class="w-8 h-8 loading-spinner mx-auto mb-4">
-                                <i data-lucide="loader" class="w-8 h-8 text-primary-600"></i>
-                            </div>
-                            <p class="text-gray-600">Generating comprehensive report...</p>
-                        </div>
-
-                        <!-- Report Content -->
-                        <div id="report-content" class="hidden space-y-8">
-                            <!-- Summary Metrics -->
-                            <div class="bg-white rounded-xl shadow-soft p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-6">Summary</h3>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-6" id="summary-metrics">
-                                    <!-- Metrics will be generated dynamically -->
-                                </div>
-                            </div>
-
-                            <!-- Skills Analysis Charts -->
-                            <div class="grid md:grid-cols-2 gap-8">
-                                <div class="bg-white rounded-xl shadow-soft p-6">
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Skills to Develop</h3>
-                                    <div id="missing-skills-chart" class="space-y-3"></div>
-                                </div>
-                                <div class="bg-white rounded-xl shadow-soft p-6">
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Strengths</h3>
-                                    <div id="strong-skills-chart" class="space-y-3"></div>
-                                </div>
-                            </div>
-
-                            <!-- Action Plan -->
-                            <div class="bg-white rounded-xl shadow-soft p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-6">Recommended Action Plan</h3>
-                                <div id="action-plan" class="space-y-4">
-                                    <!-- Action plan will be generated dynamically -->
-                                </div>
-                            </div>
-
-                            <!-- Learning Path -->
-                            <div class="bg-white rounded-xl shadow-soft p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-6">Priority Learning Areas</h3>
-                                <div id="learning-path" class="space-y-4">
-                                    <!-- Learning path will be generated dynamically -->
-                                </div>
-                            </div>
-
-                            <!-- Export Options -->
-                            <div class="bg-white rounded-xl shadow-soft p-6">
-                                <h3 class="text-xl font-semibold text-gray-900 mb-6">Export Report</h3>
-                                <div class="flex flex-wrap gap-4">
-                                    <button id="export-json" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
-                                        <i data-lucide="file-text" class="w-4 h-4"></i>
-                                        <span>Download JSON</span>
-                                    </button>
-                                    <button id="export-csv" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
-                                        <i data-lucide="table" class="w-4 h-4"></i>
-                                        <span>Download CSV</span>
-                                    </button>
-                                    <button id="print-report" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
-                                        <i data-lucide="printer" class="w-4 h-4"></i>
-                                        <span>Print Report</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-
-            <!-- Profile Page Modal -->
-            <div id="profile-page-modal" class="hidden">
-                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                    <!-- Profile Header -->
-                    <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-xl">
-                        <div class="flex items-center justify-between">
-                            <h2 class="text-2xl font-bold text-gray-900">My Profile</h2>
-                            <button id="close-profile-modal" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                                <i data-lucide="x" class="w-6 h-6"></i>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    
-                    <!-- Profile Content -->
-                    <div class="p-6">
-                        <!-- User Basic Info -->
-                        <div class="bg-gray-50 rounded-lg p-4 mb-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Account Information</h3>
-                            <div id="profile-basic-info" class="space-y-2">
-                                <!-- Will be populated dynamically -->
-                            </div>
-                        </div>
-                        
-                        <!-- Resume Section -->
-                        <div class="bg-white border border-gray-200 rounded-lg p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg font-semibold text-gray-900">Resume</h3>
-                                <div class="flex items-center space-x-2">
-                                    <button id="delete-resume-btn" class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium">
-                                        Delete
-                                    </button>
-                                    <button id="reupload-resume-btn" class="px-3 py-1 text-sm bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-medium">
-                                        Re-upload
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- No Resume State -->
-                            <div id="no-resume-state" class="hidden text-center py-8">
-                                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <i data-lucide="file-text" class="w-8 h-8 text-gray-400"></i>
-                                </div>
-                                <p class="text-gray-600 mb-4">No resume uploaded yet</p>
-                                <button id="upload-resume-btn" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                                    Upload Resume
-                                </button>
-                            </div>
-                            
-                            <!-- Resume Display -->
-                            <div id="resume-display" class="space-y-6">
-                                <!-- Resume File Info -->
-                                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                                            <i data-lucide="file-text" class="w-5 h-5 text-primary-600"></i>
-                                        </div>
-                                        <div>
-                                            <div id="resume-filename" class="font-medium text-gray-900">resume.pdf</div>
-                                            <div id="resume-upload-date" class="text-sm text-gray-500">Uploaded on Jan 1, 2024</div>
-                                        </div>
-                                    </div>
-                                    <button onclick="toggleResumeDetails()" class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                                        <span id="resume-toggle-text">View Details</span>
-                                    </button>
-                                </div>
-                                
-                                <!-- Resume Details (Collapsed by default) -->
-                                <div id="resume-details" class="hidden space-y-6">
-                                    <!-- Contact Information -->
-                                    <div>
-                                        <h4 class="font-medium text-gray-900 mb-3">Contact Information</h4>
-                                        <div id="modal-contact-info" class="space-y-2 text-sm text-gray-600">
-                                            <!-- Will be populated dynamically -->
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Professional Summary -->
-                                    <div>
-                                        <h4 class="font-medium text-gray-900 mb-3">Professional Summary</h4>
-                                        <div id="modal-summary" class="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-                                            <!-- Will be populated dynamically -->
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Skills -->
-                                    <div>
-                                        <h4 class="font-medium text-gray-900 mb-3">Technical Skills</h4>
-                                        <div id="modal-skills" class="flex flex-wrap gap-2">
-                                            <!-- Will be populated dynamically -->
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Expandable Sections -->
-                                    <div class="space-y-3">
-                                        <details class="bg-gray-50 rounded-lg">
-                                            <summary class="p-3 cursor-pointer font-medium text-gray-900">Work Experience</summary>
-                                            <div id="modal-experience" class="px-3 pb-3 text-sm text-gray-600">
-                                                <!-- Will be populated dynamically -->
-                                            </div>
-                                        </details>
-                                        
-                                        <details class="bg-gray-50 rounded-lg">
-                                            <summary class="p-3 cursor-pointer font-medium text-gray-900">Education</summary>
-                                            <div id="modal-education" class="px-3 pb-3 text-sm text-gray-600">
-                                                <!-- Will be populated dynamically -->
-                                            </div>
-                                        </details>
-                                        
-                                        <details class="bg-gray-50 rounded-lg">
-                                            <summary class="p-3 cursor-pointer font-medium text-gray-900">Projects</summary>
-                                            <div id="modal-projects" class="px-3 pb-3 text-sm text-gray-600">
-                                                <!-- Will be populated dynamically -->
-                                            </div>
-                                        </details>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="w-8 h-0.5 bg-gray-200"></div>
+            <div id="step-report" class="flex items-center space-x-2 step-indicator">
+                <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">3</div>
+                <span class="text-sm text-gray-500">Report</span>
             </div>
-
-            <!-- File Upload Modal -->
-            <div id="file-upload-modal" class="hidden">
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-semibold text-gray-900">Upload Resume</h3>
-                <button id="close-upload-modal" class="p-1 text-gray-400 hover:text-gray-600">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            
-            <div id="upload-modal-area" class="profile-upload-area">
-                <div class="space-y-4">
-                    <div class="mx-auto w-12 h-12 text-gray-400">
-                        <i data-lucide="upload" class="w-12 h-12"></i>
-                    </div>
-                    <div>
-                        <p class="text-lg font-medium text-gray-900">Drop your resume here, or <span class="text-primary-600">browse</span></p>
-                        <p class="text-sm text-gray-500 mt-1">Support for PDF and DOCX files up to 10MB</p>
-                    </div>
-                </div>
-                <input type="file" id="upload-modal-input" accept=".pdf,.docx" class="hidden">
-            </div>
-            
-            <div id="upload-modal-progress" class="hidden mt-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-6 h-6 loading-spinner">
-                        <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-700">Processing resume...</span>
-                            <span class="text-gray-500">Please wait</span>
-                        </div>
-                        <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
-    </div>
 </div>
 
-            <!-- Toast Notifications -->
-            <div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50"></div>
-        </div>
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Upload Resume Tab -->
+            <div id="tab-upload" class="tab-content">
+                <div class="max-w-3xl mx-auto">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Upload Your Resume</h2>
+                        <p class="text-lg text-gray-600">Get AI-powered job recommendations and skill gap analysis</p>
+                    </div>
+
+                    <!-- Upload Area -->
+                    <div class="bg-white rounded-xl shadow-soft p-8">
+                        <div id="upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary-400 transition-colors cursor-pointer">
+                            <div class="space-y-4">
+                                <div class="mx-auto w-12 h-12 text-gray-400">
+                                    <i data-lucide="upload" class="w-12 h-12"></i>
+                                </div>
+                                <div>
+                                    <p class="text-lg font-medium text-gray-900">Drop your resume here, or <span class="text-primary-600">browse</span></p>
+                                    <p class="text-sm text-gray-500 mt-1">Support for PDF and DOCX files up to 10MB</p>
+                                </div>
+                            </div>
+                            <input type="file" id="resume-input" accept=".pdf,.docx" class="hidden">
+                        </div>
+                        
+                        <!-- Upload Progress -->
+                        <div id="upload-progress" class="hidden mt-6">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-6 h-6 loading-spinner">
+                                    <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-700">Processing resume...</span>
+                                        <span class="text-gray-500">Please wait</span>
+                                    </div>
+                                    <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resume Information Display -->
+                    <div id="resume-info" class="hidden mt-8 bg-white rounded-xl shadow-soft p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-6">Extracted Information</h3>
+                        
+                        <div class="grid md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <h4 class="font-medium text-gray-900 mb-2">Contact Information</h4>
+                                <div id="contact-info" class="space-y-1 text-sm text-gray-600"></div>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-900 mb-2">Summary</h4>
+                                <div id="resume-summary" class="text-sm text-gray-600"></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="font-medium text-gray-900 mb-3">Technical Skills</h4>
+                            <div id="skills-display" class="flex flex-wrap gap-2"></div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <button class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('experience')">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="font-medium text-gray-900">Work Experience</h4>
+                                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="experience-chevron"></i>
+                                    </div>
+                                </button>
+                                <div id="experience-content" class="hidden mt-2 p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
+                            </div>
+
+                            <div>
+                                <button class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('education')">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="font-medium text-gray-900">Education</h4>
+                                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="education-chevron"></i>
+                                    </div>
+                                </button>
+                                <div id="education-content" class="hidden mt-2 p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
+                            </div>
+
+                            <div>
+                                <button class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('projects')">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="font-medium text-gray-900">Projects</h4>
+                                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="projects-chevron"></i>
+                                    </div>
+                                </button>
+                                <div id="projects-content" class="hidden mt-2 p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 flex justify-end">
+                            <button id="continue-to-search" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                                Continue to Job Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Job Search Tab -->
+            <div id="tab-search" class="tab-content hidden">
+                <div class="max-w-6xl mx-auto">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Find Relevant Jobs</h2>
+                        <p class="text-lg text-gray-600">Search for positions that match your profile</p>
+                    </div>
+
+                    <!-- Search Form -->
+                    <div class="bg-white rounded-xl shadow-soft p-6 mb-8">
+                        <div class="grid md:grid-cols-3 gap-4">
+                            <div class="md:col-span-2">
+                                <label for="job-query" class="block text-sm font-medium text-gray-700 mb-2">Job Title / Keywords</label>
+                                <input type="text" id="job-query" placeholder="e.g., Software Engineer, Data Scientist, Product Manager" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                                <div class="space-y-2">
+                                    <select id="country-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                                        <option value="Pakistan">Pakistan</option>
+                                        <option value="India">India</option>
+                                        <option value="USA">USA</option>
+                                    </select>
+                                    <select id="city-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" disabled>
+                                        <option value="">Select City (Optional)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between mt-6">
+                            <div class="flex items-center space-x-4">
+                                <label for="num-jobs" class="text-sm font-medium text-gray-700">Number of jobs:</label>
+                                <select id="num-jobs" class="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="30">30</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <button id="search-jobs-btn" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center space-x-2">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                                <span>Search Jobs</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Suggested Jobs -->
+                    <div id="suggested-jobs" class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                                    <i data-lucide="lightbulb" class="w-5 h-5 text-blue-600"></i>
+                                    <span>AI Job Suggestions</span>
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-1">Based on your resume and skills</p>
+                            </div>
+                            <button id="get-suggestions-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                <span>Get Suggestions</span>
+                            </button>
+                        </div>
+                        
+                        <div id="suggestions-loading" class="hidden text-center py-8">
+                            <div class="w-6 h-6 loading-spinner mx-auto mb-2">
+                                <i data-lucide="loader" class="w-6 h-6 text-blue-600"></i>
+                            </div>
+                            <p class="text-sm text-gray-600">AI is analyzing your profile...</p>
+                        </div>
+                        
+                        <div id="suggestions-content" class="hidden">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="suggestions-grid">
+                                <!-- Suggestions will be populated here -->
+                            </div>
+                            <p class="text-xs text-gray-500 mt-3 text-center">Click any suggestion to search for those jobs</p>
+                        </div>
+                    </div>
+
+                    <!-- Search Loading -->
+                    <div id="search-loading" class="hidden bg-white rounded-xl shadow-soft p-8 text-center">
+                        <div class="w-8 h-8 loading-spinner mx-auto mb-4">
+                            <i data-lucide="loader" class="w-8 h-8 text-primary-600"></i>
+                        </div>
+                        <p class="text-gray-600">Searching for jobs and analyzing matches...</p>
+                    </div>
+
+                    <!-- Job Results -->
+                    <div id="job-results" class="hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 id="results-title" class="text-2xl font-bold text-gray-900">Found Jobs</h3>
+                            <div class="flex items-center space-x-4">
+                                <select id="sort-jobs" class="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <option value="relevance">Sort by Relevance</option>
+                                    <option value="company">Sort by Company</option>
+                                    <option value="location">Sort by Location</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="jobs-container" class="space-y-4"></div>
+
+                        <div class="mt-8 flex justify-center">
+                            <button id="continue-to-analysis" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                                Continue to Analysis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Tab -->
+            <div id="tab-analysis" class="tab-content hidden">
+                <div class="max-w-6xl mx-auto">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Skill Gap Analysis</h2>
+                        <p class="text-lg text-gray-600">AI-powered analysis of your skills vs job requirements</p>
+                    </div>
+
+                    <!-- Analysis Control -->
+                    <div class="bg-white rounded-xl shadow-soft p-6 mb-8 text-center">
+                        <p class="text-gray-600 mb-4">Analyze your profile against the top matching jobs to identify skill gaps and opportunities.</p>
+                        <button id="start-analysis-btn" class="px-8 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center space-x-2 mx-auto">
+                            <i data-lucide="brain" class="w-5 h-5"></i>
+                            <span>Start AI Analysis</span>
+                        </button>
+                    </div>
+
+                    <!-- Analysis Loading -->
+                    <div id="analysis-loading" class="hidden bg-white rounded-xl shadow-soft p-12 text-center">
+                        <div class="w-12 h-12 loading-spinner mx-auto mb-6">
+                            <i data-lucide="loader" class="w-12 h-12 text-primary-600"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Analyzing Skills</h3>
+                        <p class="text-gray-600 mb-4">AI is comparing your profile with job requirements...</p>
+                        <div class="max-w-xs mx-auto bg-gray-200 rounded-full h-2">
+                            <div id="analysis-progress" class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Results -->
+                    <div id="analysis-results" class="hidden space-y-8">
+                        <div id="analysis-tabs" class="border-b border-gray-200">
+                            <nav class="flex space-x-8" aria-label="Analysis tabs">
+                                <!-- Analysis tabs will be generated dynamically -->
+                            </nav>
+                        </div>
+
+                        <div id="analysis-content">
+                            <!-- Analysis content will be generated dynamically -->
+                        </div>
+
+                        <div class="flex justify-center">
+                            <button id="continue-to-report" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
+                                Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Tab -->
+            <div id="tab-report" class="tab-content hidden">
+                <div class="max-w-6xl mx-auto">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Comprehensive Report</h2>
+                        <p class="text-lg text-gray-600">Complete analysis and actionable recommendations</p>
+                    </div>
+
+                    <!-- Report Loading -->
+                    <div id="report-loading" class="hidden bg-white rounded-xl shadow-soft p-8 text-center">
+                        <div class="w-8 h-8 loading-spinner mx-auto mb-4">
+                            <i data-lucide="loader" class="w-8 h-8 text-primary-600"></i>
+                        </div>
+                        <p class="text-gray-600">Generating comprehensive report...</p>
+                    </div>
+
+                    <!-- Report Content -->
+                    <div id="report-content" class="hidden space-y-8">
+                        <!-- Summary Metrics -->
+                        <div class="bg-white rounded-xl shadow-soft p-6">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-6">Summary</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-6" id="summary-metrics">
+                                <!-- Metrics will be generated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Skills Analysis Charts -->
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <div class="bg-white rounded-xl shadow-soft p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Skills to Develop</h3>
+                                <div id="missing-skills-chart" class="space-y-3"></div>
+                            </div>
+                            <div class="bg-white rounded-xl shadow-soft p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Strengths</h3>
+                                <div id="strong-skills-chart" class="space-y-3"></div>
+                            </div>
+                        </div>
+
+                        <!-- Action Plan -->
+                        <div class="bg-white rounded-xl shadow-soft p-6">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-6">Recommended Action Plan</h3>
+                            <div id="action-plan" class="space-y-4">
+                                <!-- Action plan will be generated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Learning Path -->
+                        <div class="bg-white rounded-xl shadow-soft p-6">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-6">Priority Learning Areas</h3>
+                            <div id="learning-path" class="space-y-4">
+                                <!-- Learning path will be generated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Export Options -->
+                        <div class="bg-white rounded-xl shadow-soft p-6">
+                            <h3 class="text-xl font-semibold text-gray-900 mb-6">Export Report</h3>
+                            <div class="flex flex-wrap gap-4">
+                                <button id="export-json" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
+                                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                                    <span>Download JSON</span>
+                                </button>
+                                <button id="export-csv" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
+                                    <i data-lucide="table" class="w-4 h-4"></i>
+                                    <span>Download CSV</span>
+                                </button>
+                                <button id="print-report" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
+                                    <i data-lucide="printer" class="w-4 h-4"></i>
+                                    <span>Print Report</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50"></div>
     </div>
 
-    <script type="module" src="/src/main.ts">
-        window.hideErrorBanner = () => {
-    const banner = document.getElementById('error-banner');
-    if (banner) {
-      banner.classList.add('-translate-y-full');
-      setTimeout(() => banner.remove(), 300);
-    }
-  };
-  
-  window.hideSuccessBanner = () => {
-    const banner = document.getElementById('success-banner');
-    if (banner) {
-      banner.classList.add('-translate-y-full');
-      setTimeout(() => banner.remove(), 300);
-    }
-  };
-    </script>
+    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/components/authModal.js"></script>
+    <script type="module" src="/src/components/profileSetup.js"></script>
+    <script type="module" src="/src/main.ts"></script>
+    </div>
+
 </body>
 </html>

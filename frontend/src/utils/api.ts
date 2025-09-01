@@ -13,21 +13,7 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
-api.interceptors.request.use(
-  async (config) => {
-    const token = await authService.getIdToken();
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for error handling
+// API response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -35,7 +21,7 @@ api.interceptors.response.use(
     
     // Handle authentication errors
     if (error.response?.status === 401) {
-      console.log('Authentication error, logging out user');
+      // Token expired or invalid, force logout
       authService.logout();
     }
     
@@ -44,7 +30,7 @@ api.interceptors.response.use(
 );
 
 export const apiService = {
-  // Add auth header to requests (legacy method, now handled by interceptor)
+  // Add auth header to requests
   async addAuthHeader(config: any = {}): Promise<any> {
     const token = await authService.getIdToken();
     if (token) {
@@ -58,6 +44,7 @@ export const apiService = {
     }
     return config;
   },
+  
 
   // Health check (no auth required)
   async checkHealth(): Promise<boolean> {
@@ -74,11 +61,13 @@ export const apiService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await api.post('/upload-resume', formData, {
+    const config = await this.addAuthHeader({
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
+
+    const response = await api.post('/upload-resume', formData, config);
     return response.data;
   },
 
@@ -88,11 +77,13 @@ export const apiService = {
     total_count: number;
     query_id: string;
   }> {
+    const config = await this.addAuthHeader();
+    
     const response = await api.post('/search-jobs', {
       job_query,
       location,
       num_jobs,
-    });
+    }, config);
 
     return response.data;
   },
@@ -103,11 +94,13 @@ export const apiService = {
     return response.data;
   },
   
-  // Get job suggestions (requires auth)
+  // Get job suggestions (no auth required for now, but can be changed)
   async getSuggestedJobs(resume_info: ResumeInfo): Promise<{ suggestions: string[]; message: string }> {
+    const config = await this.addAuthHeader();
+    
     const response = await api.post('/suggest-jobs', {
       resume_info,
-    });
+    }, config);
     return response.data;
   },
 
@@ -117,7 +110,10 @@ export const apiService = {
     total_count: number;
     message: string;
   }> {
+    const config = await this.addAuthHeader();
+    
     const response = await api.get(`/similar-jobs/${resume_id}`, {
+      ...config,
       params: {
         query_id,
         top_k,
@@ -132,22 +128,26 @@ export const apiService = {
     analyses: JobAnalysis[];
     message: string;
   }> {
+    const config = await this.addAuthHeader();
+    
     const response = await api.post('/analyze-skills', {
       resume_id,
       jobs,
-    });
+    }, config);
 
     return response.data;
   },
 
-  // Generate report (requires auth)
+  // Generate report (no auth required for now, but data should be from authenticated session)
   async generateReport(analyses: JobAnalysis[]): Promise<{
     report: OverallReport;
     message: string;
   }> {
+    const config = await this.addAuthHeader();
+    
     const response = await api.post('/generate-report', {
       analyses,
-    });
+    }, config);
 
     return response.data;
   },
@@ -158,7 +158,9 @@ export const apiService = {
     profile?: any;
     message?: string;
   }> {
-    const response = await api.get('/user/profile');
+    const config = await this.addAuthHeader();
+    
+    const response = await api.get('/user/profile', config);
     return response.data;
   },
 
@@ -167,24 +169,22 @@ export const apiService = {
     success: boolean;
     message: string;
   }> {
-    const response = await api.post('/user/profile', profileData);
+    const config = await this.addAuthHeader();
+    
+    const response = await api.post('/user/profile', profileData, config);
     return response.data;
   },
 
-  // Session management endpoints (requires auth)
-  async getSessionData(): Promise<any> {
-    const user = authService.getCurrentUser();
-    if (!user) throw new Error('User not authenticated');
-    
-    const response = await api.get(`/session/${user.uid}`);
+  // Session management endpoints (for compatibility, but not needed with Firebase)
+  async getSessionData(user_id: string): Promise<any> {
+    const config = await this.addAuthHeader();
+    const response = await api.get(`/session/${user_id}`, config);
     return response.data;
   },
 
-  async clearSession(): Promise<any> {
-    const user = authService.getCurrentUser();
-    if (!user) throw new Error('User not authenticated');
-    
-    const response = await api.delete(`/session/${user.uid}`);
+  async clearSession(user_id: string): Promise<any> {
+    const config = await this.addAuthHeader();
+    const response = await api.delete(`/session/${user_id}`, config);
     return response.data;
   },
 
@@ -194,29 +194,11 @@ export const apiService = {
     message: string;
     status: string;
   }> {
-    const response = await api.post(`/analyze-skills-async/${resume_id}`, jobs);
-    return response.data;
-  },
-
-  // Get user's resume history (requires auth)
-  async getResumeHistory(): Promise<{
-    success: boolean;
-    resumes?: any[];
-    message: string;
-  }> {
-    const response = await api.get('/user/resumes');
-    return response.data;
-  },
-
-  // Delete resume (requires auth)
-  async deleteResume(resume_id: string): Promise<{
-    success: boolean;
-    message: string;
-  }> {
-    const response = await api.delete(`/user/resume/${resume_id}`);
+    const config = await this.addAuthHeader();
+    
+    const response = await api.post(`/analyze-skills-async/${resume_id}`, jobs, config);
     return response.data;
   },
 };
-
 
 export default apiService;
