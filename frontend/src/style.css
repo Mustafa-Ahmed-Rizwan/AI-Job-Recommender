@@ -151,6 +151,35 @@
   }
 }
 /* Add to your existing style.css file */
+/* Add these styles to your existing CSS */
+
+.modal-overlay {
+  backdrop-filter: blur(4px);
+}
+
+.profile-modal {
+  transform: scale(0.95);
+  opacity: 0;
+  transition: all 0.2s ease-in-out;
+}
+
+.profile-modal.show {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.resume-status-indicator {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
 
 /* Job Description Styling */
 .job-description {

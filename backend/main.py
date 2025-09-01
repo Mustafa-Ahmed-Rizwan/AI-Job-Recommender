@@ -8,6 +8,8 @@ import json
 from datetime import datetime
 import asyncio
 import logging
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 # Import your existing modules
 from backend.src.resume_processor import ResumeProcessor
@@ -54,6 +56,12 @@ async def startup_event():
     try:
         resume_processor = ResumeProcessor()
         skill_analyzer = SkillGapAnalyzer()
+        
+        # Initialize Firebase Admin SDK (if not already done in auth.py)
+        if not firebase_admin._apps:
+            # This will use the same credentials as your auth.py
+            pass  # Firebase already initialized in auth.py
+            
         logger.info("Processors initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize processors: {e}")
@@ -90,10 +98,37 @@ class ReportResponse(BaseModel):
     report: Dict[str, Any]
     message: str
 
-# In-memory storage for session data (in production, use Redis or database)
-session_storage = {}
+
 
 # API Endpoints
+def get_firebase_db():
+    """Get Firestore database instance"""
+    return firestore.client()
+
+def save_user_profile_to_firebase(user_id: str, profile_data: dict):
+    """Save user profile data to Firebase"""
+    try:
+        db = get_firebase_db()
+        doc_ref = db.collection('user_profiles').document(user_id)
+        doc_ref.set(profile_data, merge=True)
+        logger.info(f"Profile saved to Firebase for user: {user_id}")
+    except Exception as e:
+        logger.error(f"Error saving profile to Firebase: {e}")
+        raise
+
+def get_user_profile_from_firebase(user_id: str) -> dict:
+    """Get user profile data from Firebase"""
+    try:
+        db = get_firebase_db()
+        doc_ref = db.collection('user_profiles').document(user_id)
+        doc = doc_ref.get()
+        
+        if doc.exists:
+            return doc.to_dict()
+        return {}
+    except Exception as e:
+        logger.error(f"Error getting profile from Firebase: {e}")
+        return {}
 
 @app.get("/")
 async def root():
@@ -127,7 +162,7 @@ async def upload_resume(
     try:
         # Read file content
         content = await file.read()
-        logger.info("File read complete")  # Add logs at key steps
+        logger.info("File read complete")
         
         # Create a file-like object for processing
         from io import BytesIO
@@ -145,16 +180,21 @@ async def upload_resume(
         logger.info("Resume info extracted")
         
         # Generate user ID and store resume
-        user_id = str(uuid.uuid4())
+        user_id = current_user["uid"]
         resume_id = resume_processor.store_resume_in_pinecone(resume_info, user_id)
         logger.info("Stored in Pinecone")
         
-        # Store in session (in production, use proper session management)
-        session_storage[user_id] = {
+        # Save to Firebase instead of session_storage
+        profile_data = {
+            "uid": user_id,
+            "email": current_user.get("email"),
+            "has_resume": True,
             "resume_info": resume_info,
             "resume_id": resume_id,
-            "created_at": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
+            "filename": file.filename
         }
+        save_user_profile_to_firebase(user_id, profile_data)
         
         return ResumeProcessResponse(
             resume_id=resume_id,
@@ -235,12 +275,11 @@ async def analyze_skills(
     if not skill_analyzer:
         raise HTTPException(status_code=500, detail="Skill analyzer not initialized")
     
-    # Find resume info from session storage
-    resume_info = None
-    for user_id, session_data in session_storage.items():
-        if session_data.get("resume_id") == request.resume_id:
-            resume_info = session_data.get("resume_info")
-            break
+    user_id = current_user["uid"]
+    
+    # Get resume info from Firebase instead of session_storage
+    profile_data = get_user_profile_from_firebase(user_id)
+    resume_info = profile_data.get("resume_info")
     
     if not resume_info:
         raise HTTPException(status_code=404, detail="Resume not found. Please upload resume first.")
@@ -260,7 +299,6 @@ async def analyze_skills(
     except Exception as e:
         logger.error(f"Error during skill analysis: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error during skill analysis: {str(e)}")
-
 @app.post("/generate-report", response_model=ReportResponse)
 async def generate_report(request: ReportRequest):
     """Generate comprehensive report from analyses"""
@@ -285,26 +323,9 @@ async def generate_report(request: ReportRequest):
         logger.error(f"Error generating report: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")
 
-@app.get("/session/{user_id}")
-async def get_session_data(current_user: dict = Depends(get_current_user)):
-    """Get session data for the current user"""
-    user_id = current_user["id"]
-    if user_id not in session_storage:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    return {
-        "session_data": session_storage[user_id],
-        "message": "Session data retrieved successfully"
-    }
 
-@app.delete("/session/{user_id}")
-async def clear_session(current_user: dict = Depends(get_current_user)):
-    """Clear session data for the current user"""
-    user_id = current_user["id"]
-    if user_id in session_storage:
-        del session_storage[user_id]
-    
-    return {"message": "Session cleared successfully"}
+
+
 
 # Background task example for heavy processing
 @app.post("/analyze-skills-async/{resume_id}")
@@ -354,6 +375,111 @@ async def suggest_jobs(
     except Exception as e:
         logger.error(f"Error generating job suggestions: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error generating suggestions: {str(e)}")
+
+# main.py - Add these new endpoints after the existing ones
+
+@app.get("/user/profile")
+async def get_user_profile(current_user: dict = Depends(get_current_user)):
+    """Get user profile from Firebase"""
+    user_id = current_user["uid"]
+    
+    try:
+        # Get profile from Firebase instead of session_storage
+        profile_data = get_user_profile_from_firebase(user_id)
+        
+        # Set defaults if no profile exists
+        if not profile_data:
+            profile_data = {
+                "uid": user_id,
+                "email": current_user.get("email"),
+                "has_resume": False,
+                "resume_info": None,
+                "resume_id": None,
+                "last_updated": None
+            }
+        
+        return {
+            "success": True,
+            "profile": profile_data
+        }
+    except Exception as e:
+        logger.error(f"Error getting user profile: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting profile: {str(e)}")
+
+@app.put("/user/profile")
+async def update_user_profile(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update user resume"""
+    user_id = current_user["uid"]
+    
+    if not resume_processor:
+        raise HTTPException(status_code=500, detail="Resume processor not initialized")
+    
+    if file.content_type not in ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]:
+        raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported")
+    
+    try:
+        # Process the new resume (same logic as upload)
+        content = await file.read()
+        from io import BytesIO
+        file_obj = BytesIO(content)
+        file_obj.name = file.filename
+        
+        if file.content_type == "application/pdf":
+            resume_text = resume_processor.extract_text_from_pdf(file_obj)
+        else:
+            resume_text = resume_processor.extract_text_from_docx(file_obj)
+        
+        resume_info = resume_processor.extract_resume_info(resume_text)
+        resume_id = resume_processor.store_resume_in_pinecone(resume_info, user_id)
+        
+        # Update Firebase instead of session_storage
+        profile_data = {
+            "uid": user_id,
+            "email": current_user.get("email"),
+            "has_resume": True,
+            "resume_info": resume_info,
+            "resume_id": resume_id,
+            "last_updated": datetime.now().isoformat(),
+            "filename": file.filename
+        }
+        save_user_profile_to_firebase(user_id, profile_data)
+        
+        return {
+            "success": True,
+            "resume_id": resume_id,
+            "resume_info": resume_info,
+            "message": "Resume updated successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error updating resume: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating resume: {str(e)}")
+
+@app.delete("/user/resume")
+async def delete_user_resume(current_user: dict = Depends(get_current_user)):
+    """Delete user resume"""
+    user_id = current_user["uid"]
+    
+    try:
+        # Update Firebase profile instead of session_storage
+        profile_data = {
+            "has_resume": False,
+            "resume_info": None,
+            "resume_id": None,
+            "last_updated": datetime.now().isoformat()
+        }
+        save_user_profile_to_firebase(user_id, profile_data)
+        
+        return {
+            "success": True,
+            "message": "Resume deleted successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error deleting resume: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting resume: {str(e)}")
 
 # Error handlers
 @app.exception_handler(404)

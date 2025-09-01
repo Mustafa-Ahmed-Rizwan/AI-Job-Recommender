@@ -151,19 +151,6 @@ export const apiService = {
 
     return response.data;
   },
-
-  // Get user profile (requires auth)
-  async getUserProfile(): Promise<{
-    success: boolean;
-    profile?: any;
-    message?: string;
-  }> {
-    const config = await this.addAuthHeader();
-    
-    const response = await api.get('/user/profile', config);
-    return response.data;
-  },
-
   // Update user profile (requires auth)
   async updateUserProfile(profileData: any): Promise<{
     success: boolean;
@@ -185,6 +172,52 @@ export const apiService = {
   async clearSession(user_id: string): Promise<any> {
     const config = await this.addAuthHeader();
     const response = await api.delete(`/session/${user_id}`, config);
+    return response.data;
+  },
+  async getUserProfile(): Promise<{
+    success: boolean;
+    profile?: {
+      uid: string;
+      email: string;
+      has_resume: boolean;
+      resume_info?: ResumeInfo;
+      resume_id?: string;
+      last_updated?: string;
+    };
+    message?: string;
+  }> {
+    const config = await this.addAuthHeader();
+    const response = await api.get('/user/profile', config);
+    return response.data;
+  },
+
+  // Update user resume (requires auth)
+  async updateUserResume(file: File): Promise<{
+    success: boolean;
+    resume_id: string;
+    resume_info: ResumeInfo;
+    message: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const config = await this.addAuthHeader({
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    const response = await api.put('/user/profile', formData, config);
+    return response.data;
+  },
+
+  // Delete user resume (requires auth)
+  async deleteUserResume(): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    const config = await this.addAuthHeader();
+    const response = await api.delete('/user/resume', config);
     return response.data;
   },
 
