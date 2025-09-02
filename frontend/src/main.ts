@@ -1497,38 +1497,6 @@ const updateSkillProgress = (skillIndex: number, value: string) => {
   if (percentage) percentage.textContent = `${value}%`;
 };
 
-const sortJobs = (criteria: string) => {
-  if (!appState.jobsData.length) return;
-  
-  let sortedJobs = [...appState.jobsData];
-  
-  switch (criteria) {
-    case 'relevance':
-      sortedJobs.sort((a, b) => {
-        const scoreA = parseFloat(String(a.similarity_score || 0));
-        const scoreB = parseFloat(String(b.similarity_score || 0));
-        return scoreB - scoreA;
-      });
-      break;
-    case 'company':
-      sortedJobs.sort((a, b) => {
-        const companyA = (a.company_name || a.company || '').toLowerCase();
-        const companyB = (b.company_name || b.company || '').toLowerCase();
-        return companyA.localeCompare(companyB);
-      });
-      break;
-    case 'location':
-      sortedJobs.sort((a, b) => {
-        const locationA = (a.location || '').toLowerCase();
-        const locationB = (b.location || '').toLowerCase();
-        return locationA.localeCompare(locationB);
-      });
-      break;
-  }
-  
-  displayJobs(sortedJobs);
-};
-
 // Export functions
 const exportReport = (format: 'json' | 'csv') => {
   if (!appState.overallReport) {
@@ -1705,11 +1673,6 @@ const setupEventListeners = () => {
   document.getElementById('search-jobs-btn')?.addEventListener('click', searchJobs);
   document.getElementById('start-analysis-btn')?.addEventListener('click', startAnalysis);
   
-  // Sort dropdown
-  document.getElementById('sort-jobs')?.addEventListener('change', (e) => {
-    const criteria = (e.target as HTMLSelectElement).value;
-    sortJobs(criteria);
-  });
   
   document.getElementById('print-report')?.addEventListener('click', printReport);
   
