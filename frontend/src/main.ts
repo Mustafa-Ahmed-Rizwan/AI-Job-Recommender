@@ -656,6 +656,7 @@ const uploadResume = async (file: File) => {
     
     // Upload file
     const result = await apiService.uploadResume(file);
+    
     // Save to Firebase
     const saveResult = await resumeService.saveResume(result.resume_info, file.name);
     if (!saveResult.success) {
@@ -666,17 +667,64 @@ const uploadResume = async (file: File) => {
     clearInterval(progressInterval);
     if (progressBar) progressBar.style.width = '100%';
     
-    // Update state
+    // Update state immediately
     appState.resumeInfo = result.resume_info;
     appState.resumeId = result.resume_id;
     appState.resumeProcessed = true;
+    
+    // Update user profile state
+    if (appState.userProfile) {
+      appState.userProfile.has_resume = true;
+      appState.userProfile.resume_info = result.resume_info;
+      appState.userProfile.resume_id = result.resume_id;
+      appState.userProfile.last_updated = new Date().toISOString();
+    }
     
     // Hide progress and show result
     setTimeout(() => {
       uploadProgress.classList.add('hidden');
       displayResumeInfo(result.resume_info);
       resumeInfo?.classList.remove('hidden');
-      showToast('Resume processed successfully!');
+      
+      // Hide upload area and show success message
+      const uploadContainer = document.getElementById('tab-upload')?.querySelector('.bg-white');
+      if (uploadContainer) {
+        // Remove existing upload area completely
+        uploadArea.classList.add('hidden');
+        
+        // Remove any existing message
+        const existingMessage = document.getElementById('resume-loaded-message');
+        if (existingMessage) {
+          existingMessage.remove();
+        }
+        
+        // Add success message
+        const loadedMessage = document.createElement('div');
+        loadedMessage.id = 'resume-loaded-message';
+        loadedMessage.className = 'bg-green-50 border border-green-200 rounded-lg p-4 mb-6';
+        loadedMessage.innerHTML = `
+          <div class="flex items-center space-x-3">
+            <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+            <div>
+              <p class="text-sm font-medium text-green-800">Resume uploaded successfully</p>
+              <p class="text-xs text-green-600">Ready to search for jobs</p>
+            </div>
+          </div>
+        `;
+        uploadContainer.insertBefore(loadedMessage, uploadContainer.firstChild);
+      }
+      
+      // Auto-switch to search tab after successful upload
+      setTimeout(() => {
+        showTab('search');
+      }, 1000);
+      
+      showToast('Resume processed successfully! Ready to search jobs.');
+      
+      // Initialize lucide icons for new elements
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
     }, 500);
     
   } catch (error: any) {
