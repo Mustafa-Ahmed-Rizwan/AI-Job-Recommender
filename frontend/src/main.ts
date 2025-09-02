@@ -395,6 +395,15 @@ const showAuthForms = () => {
   document.getElementById('auth-section')?.classList.remove('hidden');
   document.getElementById('main-app')?.classList.add('hidden');
   
+  // Hide user-specific UI elements when showing auth forms
+  const userInfo = document.getElementById('user-info');
+  const profileBtn = document.getElementById('profile-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  
+  if (userInfo) userInfo.textContent = '';
+  if (profileBtn) profileBtn.style.display = 'none';
+  if (logoutBtn) logoutBtn.style.display = 'none';
+  
   // Always show sign-in form by default and clear inputs
   showSignInForm();
 };
@@ -403,11 +412,18 @@ const showMainApp = async () => {
   document.getElementById('auth-section')?.classList.add('hidden');
   document.getElementById('main-app')?.classList.remove('hidden');
   
-  // Update user info display
+  // Update user info display and show user-specific elements
   const user = authService.getCurrentUser();
   const userInfo = document.getElementById('user-info');
+  const profileBtn = document.getElementById('profile-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  
   if (user && userInfo) {
     userInfo.textContent = `Welcome, ${user.email}`;
+    
+    // Show user-specific UI elements
+    if (profileBtn) profileBtn.style.display = 'block';
+    if (logoutBtn) logoutBtn.style.display = 'block';
   }
   
   // Load user profile and check for existing resume
@@ -551,6 +567,16 @@ const handleLogout = async () => {
     if (result.success) {
       showToast('Signed out successfully!');
       clearAllAuthForms();
+      
+      // Hide user-specific UI elements
+      const userInfo = document.getElementById('user-info');
+      const profileBtn = document.getElementById('profile-btn');
+      const logoutBtn = document.getElementById('logout-btn');
+      
+      if (userInfo) userInfo.textContent = '';
+      if (profileBtn) profileBtn.style.display = 'none';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      
       showAuthForms();
       
       // Reset everything including user profile
