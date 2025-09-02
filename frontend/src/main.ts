@@ -1017,7 +1017,11 @@ const startAnalysis = async () => {
     }, 500);
     
     // Analyze top 5 jobs
-    const jobsToAnalyze = appState.jobsData.slice(0, 5);
+    const jobsToAnalyze = appState.jobsData.slice(0, 5).map(job => ({
+  ...job,
+  company_name: job.company_name || job.company || '',
+  company: job.company || job.company_name || ''
+}));
     const result = await apiService.analyzeSkills(appState.resumeId, jobsToAnalyze);
     
     // Complete progress
@@ -1099,7 +1103,7 @@ const showAnalysisTab = (index: number) => {
         <div class="flex items-center space-x-4 text-gray-600">
           <span class="flex items-center space-x-1">
             <i data-lucide="building" class="w-4 h-4"></i>
-            <span>${jobInfo.company_name || jobInfo.company || 'Unknown Company'}</span>
+            <span>${analysis.job_info?.company_name || analysis.job_info?.company || jobInfo.company_name || jobInfo.company || 'Unknown Company'}</span>
           </span>
           <span class="flex items-center space-x-1">
             <i data-lucide="map-pin" class="w-4 h-4"></i>
@@ -1576,6 +1580,7 @@ const initializeApp = () => {
   
   // Setup event listeners
   setupEventListeners();
+  document.getElementById('country-select')?.dispatchEvent(new Event('change'));
 };
 
 const setupEventListeners = () => {
@@ -1665,25 +1670,6 @@ const setupEventListeners = () => {
     citySelect.disabled = false;
   } catch (error) {
     citySelect.innerHTML = '<option value="">Error loading cities</option>';
-    showToast('Error loading cities', 'error');
-  }
-});
-
-// Add this new event listener for initial Pakistan cities load
-document.addEventListener('DOMContentLoaded', async () => {
-  const citySelect = document.getElementById('city-select') as HTMLSelectElement;
-  try {
-    const result = await apiService.getCities('Pakistan');
-    citySelect.innerHTML = '<option value="">Select City (Optional)</option>';
-    result.cities.forEach(city => {
-      const option = document.createElement('option');
-      option.value = city;
-      option.textContent = city;
-      citySelect.appendChild(option);
-    });
-    citySelect.disabled = false;
-  } catch (error) {
-    console.error('Error loading initial cities:', error);
   }
 });
   // Add in setupEventListeners function
