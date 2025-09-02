@@ -94,52 +94,25 @@ const loadUserProfile = async () => {
     if (result.success && result.profile) {
       appState.userProfile = result.profile;
       
-      // If user has a resume, load it automatically
+      // If user has a resume, load it automatically and skip to search tab
       if (result.profile.has_resume && result.profile.resume_info) {
         appState.resumeInfo = result.profile.resume_info;
-        appState.resumeId = result.profile.resume_id || null; // Fix: Handle undefined
+        appState.resumeId = result.profile.resume_id || null;
         appState.resumeProcessed = true;
         
-        // Hide upload section and show resume info
-        document.getElementById('upload-area')?.classList.add('hidden');
-        document.getElementById('upload-progress')?.classList.add('hidden');
-        displayResumeInfo(result.profile.resume_info);
-        document.getElementById('resume-info')?.classList.remove('hidden');
+        // Skip directly to the search tab instead of showing upload
+        showTab('search');
         
-        // Show "Resume loaded" message instead of upload area
-        const uploadContainer = document.getElementById('tab-upload')?.querySelector('.bg-white');
-        if (uploadContainer) {
-          // Remove existing message if present
-          const existingMessage = document.getElementById('resume-loaded-message');
-          if (existingMessage) {
-            existingMessage.remove();
-          }
-          
-          const loadedMessage = document.createElement('div');
-          loadedMessage.id = 'resume-loaded-message';
-          loadedMessage.className = 'bg-green-50 border border-green-200 rounded-lg p-4 mb-6';
-          loadedMessage.innerHTML = `
-            <div class="flex items-center space-x-3">
-              <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
-              <div>
-                <p class="text-sm font-medium text-green-800">Resume already uploaded</p>
-                <p class="text-xs text-green-600">You can update it from your profile</p>
-              </div>
-            </div>
-          `;
-          uploadContainer.insertBefore(loadedMessage, uploadContainer.firstChild);
-          
-          // Initialize lucide icons for the new element
-          if (window.lucide) {
-            window.lucide.createIcons();
-          }
-        }
-        
-        showToast('Welcome back! Your resume has been loaded.');
+        showToast('Welcome back! Your resume has been loaded. Ready to search jobs.');
+      } else {
+        // Only show upload tab if user doesn't have resume
+        showTab('upload');
       }
     }
   } catch (error) {
     console.error('Error loading user profile:', error);
+    // Default to upload tab if there's an error
+    showTab('upload');
   }
 };
 
@@ -426,7 +399,7 @@ const showMainApp = async () => {
     if (logoutBtn) logoutBtn.style.display = 'block';
   }
   
-  // Load user profile and check for existing resume
+  // Load user profile first - this will determine which tab to show
   await loadUserProfile();
 };
 // Add this helper function to completely clear all form inputs
@@ -1551,21 +1524,18 @@ const initializeApp = () => {
   // Check authentication state with updated callback
   authService.onAuthStateChange((user, isNewSignUp) => {
     if (user && !isNewSignUp) {
-      // Only show main app if user is signed in (not just signed up)
       console.log('User signed in:', user.email);
-      showMainApp();
+      showMainApp(); // This will now handle tab selection based on user status
     } else if (!user) {
       console.log('User signed out');
       showAuthForms();
     }
-    // If isNewSignUp is true, we stay on the auth forms (sign-in form)
   });
   
   // Check API status
   checkAPIStatus();
   
-  // Initialize step indicator
-  updateStepIndicator('upload');
+  // Don't initialize step indicator here - let loadUserProfile handle it
   
   // Initialize Lucide icons
   if (window.lucide) {
