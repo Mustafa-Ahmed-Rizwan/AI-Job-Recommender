@@ -1,4 +1,3 @@
-<!-- frontend/sc/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,7 +30,7 @@
             transform: translateY(-2px);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        /* Toast animations */
+        
         @keyframes slideInRight {
         from {
             transform: translateX(100%);
@@ -54,7 +53,6 @@
         }
         }
 
-        /* Ensure toast container is always visible */
         #toast-container {
         position: fixed !important;
         top: 1rem !important;
@@ -66,556 +64,564 @@
         #toast-container > * {
         pointer-events: auto;
         }
+
+        @media (max-width: 640px) {
+            .step-text {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans">
     <div id="app">
         <!-- Header -->
         <header class="bg-white shadow-sm border-b border-gray-200">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between items-center h-16">
-      <div class="flex items-center space-x-3">
-        <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-          <i data-lucide="target" class="w-5 h-5 text-white"></i>
-        </div>
-        <h1 class="text-xl font-semibold text-gray-900">AI Job Recommender</h1>
-      </div>
-      
-      <div class="flex items-center space-x-4">
-        <div id="api-status" class="flex items-center space-x-2">
-          <div class="w-2 h-2 bg-red-500 rounded-full"></div>
-          <span class="text-sm text-gray-600">Checking API...</span>
-        </div>
-        
-        <div class="flex items-center space-x-4">
-          <div id="user-info" class="text-sm text-gray-600"></div>
-          <button id="profile-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
-            <i data-lucide="user" class="w-4 h-4"></i>
-          </button>
-          <button id="logout-btn" class="p-2 text-gray-500 hover:text-gray-700 transition-colors">
-            <i data-lucide="log-out" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</header>
-<!-- Add Profile Modal before the main app div -->
-<div id="profile-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-bold text-gray-900">Profile</h2>
-      <button id="close-profile-modal" class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-    </div>
-    
-    <div id="profile-content">
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <div id="profile-email" class="text-sm text-gray-900 p-2 bg-gray-50 rounded-lg"></div>
-        </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Resume Status</label>
-          <div id="resume-status" class="text-sm p-2 bg-gray-50 rounded-lg"></div>
-        </div>
-        
-        <div id="resume-actions" class="space-y-3">
-          <!-- Resume actions will be populated dynamically -->
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- Update Resume Modal -->
-<div id="update-resume-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-    <div class="flex items-center justify-between mb-6">
-      <h2 class="text-xl font-bold text-gray-900">Update Resume</h2>
-      <button id="close-update-modal" class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-    </div>
-    
-    <div class="space-y-4">
-      <div id="update-upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 transition-colors cursor-pointer">
-        <div class="space-y-2">
-          <div class="mx-auto w-8 h-8 text-gray-400">
-            <i data-lucide="upload" class="w-8 h-8"></i>
-          </div>
-          <p class="text-sm font-medium text-gray-700">Upload new resume</p>
-          <p class="text-xs text-gray-500">PDF or DOCX files only</p>
-        </div>
-        <input type="file" id="update-resume-input" accept=".pdf,.docx" class="hidden">
-      </div>
-      
-      <div id="update-progress" class="hidden">
-        <div class="flex items-center space-x-3">
-          <div class="w-5 h-5 loading-spinner">
-            <i data-lucide="loader" class="w-5 h-5 text-primary-600"></i>
-          </div>
-          <div class="flex-1">
-            <div class="text-sm text-gray-700">Updating resume...</div>
-            <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
-              <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+            <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-14 sm:h-16">
+                    <div class="flex items-center space-x-2 sm:space-x-3">
+                        <div class="w-6 h-6 sm:w-8 sm:h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+                            <i data-lucide="target" class="w-3 h-3 sm:w-5 sm:h-5 text-white"></i>
+                        </div>
+                        <h1 class="text-lg sm:text-xl font-semibold text-gray-900">AI Job Recommender</h1>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 sm:space-x-4">
+                        <div id="api-status" class="hidden sm:flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span class="text-sm text-gray-600">Checking API...</span>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2 sm:space-x-4">
+                            <div id="user-info" class="hidden sm:block text-sm text-gray-600"></div>
+                            <button id="profile-btn" class="p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                                <i data-lucide="user" class="w-4 h-4"></i>
+                            </button>
+                            <button id="logout-btn" class="p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 transition-colors">
+                                <i data-lucide="log-out" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+        </header>
 
+        <!-- Profile Modal -->
+        <div id="profile-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm sm:max-w-md p-4 sm:p-6">
+                <div class="flex items-center justify-between mb-4 sm:mb-6">
+                    <h2 class="text-lg sm:text-xl font-bold text-gray-900">Profile</h2>
+                    <button id="close-profile-modal" class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <div id="profile-content">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <div id="profile-email" class="text-sm text-gray-900 p-2 bg-gray-50 rounded-lg break-all"></div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Resume Status</label>
+                            <div id="resume-status" class="text-sm p-2 bg-gray-50 rounded-lg"></div>
+                        </div>
+                        
+                        <div id="resume-actions" class="space-y-3">
+                            <!-- Resume actions will be populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update Resume Modal -->
+        <div id="update-resume-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm sm:max-w-md p-4 sm:p-6">
+                <div class="flex items-center justify-between mb-4 sm:mb-6">
+                    <h2 class="text-lg sm:text-xl font-bold text-gray-900">Update Resume</h2>
+                    <button id="close-update-modal" class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div id="update-upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-6 sm:p-8 text-center hover:border-primary-400 transition-colors cursor-pointer">
+                        <div class="space-y-2">
+                            <div class="mx-auto w-6 h-6 sm:w-8 sm:h-8 text-gray-400">
+                                <i data-lucide="upload" class="w-6 h-6 sm:w-8 sm:h-8"></i>
+                            </div>
+                            <p class="text-sm font-medium text-gray-700">Upload new resume</p>
+                            <p class="text-xs text-gray-500">PDF or DOCX files only</p>
+                        </div>
+                        <input type="file" id="update-resume-input" accept=".pdf,.docx" class="hidden">
+                    </div>
+                    
+                    <div id="update-progress" class="hidden">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-5 h-5 loading-spinner">
+                                <i data-lucide="loader" class="w-5 h-5 text-primary-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-sm text-gray-700">Updating resume...</div>
+                                <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Authentication Section -->
         <div id="auth-section" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-            <div class="text-center mb-8">
-            <div class="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <i data-lucide="user" class="w-6 h-6 text-white"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-gray-900">Welcome to AI Job Recommender</h2>
-            <p class="text-gray-600 mt-2">Sign in to get personalized job recommendations</p>
-            </div>
+            <div class="w-full max-w-sm sm:max-w-md bg-white rounded-xl shadow-lg p-6 sm:p-8">
+                <div class="text-center mb-6 sm:mb-8">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 bg-primary-600 rounded-xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                        <i data-lucide="user" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-gray-900">Welcome to AI Job Recommender</h2>
+                    <p class="text-gray-600 mt-2 text-sm sm:text-base">Sign in to get personalized job recommendations</p>
+                </div>
 
-            <!-- Sign In Form -->
-            <div id="signin-form">
-            <form id="signin-form-element" class="space-y-4">
-                <div>
-                <label for="signin-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input type="email" id="signin-email" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="your@email.com">
+                <!-- Sign In Form -->
+                <div id="signin-form">
+                    <form id="signin-form-element" class="space-y-4">
+                        <div>
+                            <label for="signin-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <input type="email" id="signin-email" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base"
+                                    placeholder="your@email.com">
+                        </div>
+                        <div>
+                            <label for="signin-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input type="password" id="signin-password" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base"
+                                    placeholder="Your password">
+                        </div>
+                        <button type="submit" 
+                                class="w-full px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm sm:text-base">
+                            Sign In
+                        </button>
+                    </form>
+                    
+                    <div class="mt-6 text-center">
+                        <p class="text-sm text-gray-600">
+                            Don't have an account? 
+                            <button onclick="showSignUpForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign up</button>
+                        </p>
+                    </div>
                 </div>
-                <div>
-                <label for="signin-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                <input type="password" id="signin-password" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Your password">
-                </div>
-                <button type="submit" 
-                        class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                Sign In
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center">
-                <p class="text-sm text-gray-600">
-                Don't have an account? 
-                <button onclick="showSignUpForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign up</button>
-                </p>
-            </div>
-            </div>
 
-            <!-- Sign Up Form -->
-            <div id="signup-form" class="hidden">
-            <form id="signup-form-element" class="space-y-4">
-                <div>
-                <label for="signup-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input type="email" id="signup-email" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="your@email.com">
+                <!-- Sign Up Form -->
+                <div id="signup-form" class="hidden">
+                    <form id="signup-form-element" class="space-y-4">
+                        <div>
+                            <label for="signup-email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <input type="email" id="signup-email" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base"
+                                    placeholder="your@email.com">
+                        </div>
+                        <div>
+                            <label for="signup-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input type="password" id="signup-password" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base"
+                                    placeholder="At least 6 characters">
+                        </div>
+                        <div>
+                            <label for="signup-name" class="block text-sm font-medium text-gray-700 mb-2">Full Name (Optional)</label>
+                            <input type="text" id="signup-name"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base"
+                                    placeholder="Your full name">
+                        </div>
+                        <button type="submit" 
+                                class="w-full px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm sm:text-base">
+                            Create Account
+                        </button>
+                    </form>
+                    
+                    <div class="mt-6 text-center">
+                        <p class="text-sm text-gray-600">
+                            Already have an account? 
+                            <button onclick="showSignInForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign in</button>
+                        </p>
+                    </div>
                 </div>
-                <div>
-                <label for="signup-password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                <input type="password" id="signup-password" required
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="At least 6 characters">
-                </div>
-                <div>
-                <label for="signup-name" class="block text-sm font-medium text-gray-700 mb-2">Full Name (Optional)</label>
-                <input type="text" id="signup-name"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Your full name">
-                </div>
-                <button type="submit" 
-                        class="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                Create Account
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center">
-                <p class="text-sm text-gray-600">
-                Already have an account? 
-                <button onclick="showSignInForm()" class="text-primary-600 hover:text-primary-700 font-medium">Sign in</button>
-                </p>
-            </div>
-            </div>
 
-            <!-- Loading -->
-            <div id="auth-loading" class="hidden text-center">
-            <div class="w-6 h-6 loading-spinner mx-auto mb-2">
-                <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+                <!-- Loading -->
+                <div id="auth-loading" class="hidden text-center">
+                    <div class="w-6 h-6 loading-spinner mx-auto mb-2">
+                        <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+                    </div>
+                    <p class="text-sm text-gray-600">Please wait...</p>
+                </div>
             </div>
-            <p class="text-sm text-gray-600">Please wait...</p>
-            </div>
-        </div>
         </div>
 
         <!-- Main App Container -->
         <div id="main-app" class="hidden">
-
-        <!-- Progress Indicator -->
-        <div class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center space-x-8 py-4">
-            <div id="step-search" class="flex items-center space-x-2 step-indicator active">
-                <div class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-sm font-medium">1</div>
-                <span class="text-sm font-medium text-primary-600">Find Jobs</span>
-            </div>
-            <div class="w-8 h-0.5 bg-gray-200"></div>
-            <div id="step-analysis" class="flex items-center space-x-2 step-indicator">
-                <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">2</div>
-                <span class="text-sm text-gray-500">Analysis</span>
-            </div>
-            <div class="w-8 h-0.5 bg-gray-200"></div>
-            <div id="step-report" class="flex items-center space-x-2 step-indicator">
-                <div class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">3</div>
-                <span class="text-sm text-gray-500">Report</span>
-            </div>
-            </div>
-        </div>
-</div>
-
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Upload Resume Tab -->
-            <div id="tab-upload" class="tab-content">
-                <div class="max-w-3xl mx-auto">
-                    <div class="text-center mb-8">
-                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Upload Your Resume</h2>
-                        <p class="text-lg text-gray-600">Get AI-powered job recommendations and skill gap analysis</p>
+            <!-- Progress Indicator -->
+            <div class="bg-white border-b border-gray-200">
+                <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                    <div class="flex items-center justify-center sm:justify-start space-x-4 sm:space-x-8 py-3 sm:py-4 overflow-x-auto">
+                        <div id="step-search" class="flex items-center space-x-2 step-indicator active flex-shrink-0">
+                            <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs sm:text-sm font-medium">1</div>
+                            <span class="text-xs sm:text-sm font-medium text-primary-600 step-text">Find Jobs</span>
+                        </div>
+                        <div class="w-4 sm:w-8 h-0.5 bg-gray-200 flex-shrink-0"></div>
+                        <div id="step-analysis" class="flex items-center space-x-2 step-indicator flex-shrink-0">
+                            <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs sm:text-sm font-medium">2</div>
+                            <span class="text-xs sm:text-sm text-gray-500 step-text">Analysis</span>
+                        </div>
+                        <div class="w-4 sm:w-8 h-0.5 bg-gray-200 flex-shrink-0"></div>
+                        <div id="step-report" class="flex items-center space-x-2 step-indicator flex-shrink-0">
+                            <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs sm:text-sm font-medium">3</div>
+                            <span class="text-xs sm:text-sm text-gray-500 step-text">Report</span>
+                        </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Upload Area -->
-                    <div class="bg-white rounded-xl shadow-soft p-8">
-                        <div id="upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary-400 transition-colors cursor-pointer">
-                            <div class="space-y-4">
-                                <div class="mx-auto w-12 h-12 text-gray-400">
-                                    <i data-lucide="upload" class="w-12 h-12"></i>
+            <!-- Main Content -->
+            <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+                <!-- Upload Resume Tab -->
+                <div id="tab-upload" class="tab-content">
+                    <div class="max-w-3xl mx-auto">
+                        <div class="text-center mb-6 sm:mb-8">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-4">Upload Your Resume</h2>
+                            <p class="text-base sm:text-lg text-gray-600">Get AI-powered job recommendations and skill gap analysis</p>
+                        </div>
+
+                        <!-- Upload Area -->
+                        <div class="bg-white rounded-xl shadow-soft p-4 sm:p-8">
+                            <div id="upload-area" class="border-2 border-dashed border-gray-300 rounded-lg p-8 sm:p-12 text-center hover:border-primary-400 transition-colors cursor-pointer">
+                                <div class="space-y-3 sm:space-y-4">
+                                    <div class="mx-auto w-10 h-10 sm:w-12 sm:h-12 text-gray-400">
+                                        <i data-lucide="upload" class="w-10 h-10 sm:w-12 sm:h-12"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-base sm:text-lg font-medium text-gray-900">Drop your resume here, or <span class="text-primary-600">browse</span></p>
+                                        <p class="text-xs sm:text-sm text-gray-500 mt-1">Support for PDF and DOCX files up to 10MB</p>
+                                    </div>
+                                </div>
+                                <input type="file" id="resume-input" accept=".pdf,.docx" class="hidden">
+                            </div>
+                            
+                            <!-- Upload Progress -->
+                            <div id="upload-progress" class="hidden mt-6">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-6 h-6 loading-spinner">
+                                        <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-700">Processing resume...</span>
+                                            <span class="text-gray-500">Please wait</span>
+                                        </div>
+                                        <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
+                                            <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Resume Information Display -->
+                        <div id="resume-info" class="hidden mt-6 sm:mt-8 bg-white rounded-xl shadow-soft p-4 sm:p-6">
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Extracted Information</h3>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 mb-2">Contact Information</h4>
+                                    <div id="contact-info" class="space-y-1 text-sm text-gray-600"></div>
                                 </div>
                                 <div>
-                                    <p class="text-lg font-medium text-gray-900">Drop your resume here, or <span class="text-primary-600">browse</span></p>
-                                    <p class="text-sm text-gray-500 mt-1">Support for PDF and DOCX files up to 10MB</p>
+                                    <h4 class="font-medium text-gray-900 mb-2">Summary</h4>
+                                    <div id="resume-summary" class="text-sm text-gray-600"></div>
                                 </div>
                             </div>
-                            <input type="file" id="resume-input" accept=".pdf,.docx" class="hidden">
-                        </div>
-                        
-                        <!-- Upload Progress -->
-                        <div id="upload-progress" class="hidden mt-6">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-6 h-6 loading-spinner">
-                                    <i data-lucide="loader" class="w-6 h-6 text-primary-600"></i>
+
+                            <div class="mb-4 sm:mb-6">
+                                <h4 class="font-medium text-gray-900 mb-3">Technical Skills</h4>
+                                <div id="skills-display" class="flex flex-wrap gap-2"></div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <button class="w-full text-left p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('experience')">
+                                        <div class="flex items-center justify-between">
+                                            <h4 class="font-medium text-gray-900">Work Experience</h4>
+                                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="experience-chevron"></i>
+                                        </div>
+                                    </button>
+                                    <div id="experience-content" class="hidden mt-2 p-3 sm:p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
                                 </div>
-                                <div class="flex-1">
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-gray-700">Processing resume...</span>
-                                        <span class="text-gray-500">Please wait</span>
-                                    </div>
-                                    <div class="mt-1 w-full bg-gray-200 rounded-full h-2">
-                                        <div class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
-                                    </div>
+
+                                <div>
+                                    <button class="w-full text-left p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('education')">
+                                        <div class="flex items-center justify-between">
+                                            <h4 class="font-medium text-gray-900">Education</h4>
+                                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="education-chevron"></i>
+                                        </div>
+                                    </button>
+                                    <div id="education-content" class="hidden mt-2 p-3 sm:p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
+                                </div>
+
+                                <div>
+                                    <button class="w-full text-left p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('projects')">
+                                        <div class="flex items-center justify-between">
+                                            <h4 class="font-medium text-gray-900">Projects</h4>
+                                            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="projects-chevron"></i>
+                                        </div>
+                                    </button>
+                                    <div id="projects-content" class="hidden mt-2 p-3 sm:p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Resume Information Display -->
-                    <div id="resume-info" class="hidden mt-8 bg-white rounded-xl shadow-soft p-6">
-                        <h3 class="text-xl font-semibold text-gray-900 mb-6">Extracted Information</h3>
-                        
-                        <div class="grid md:grid-cols-2 gap-6 mb-6">
-                            <div>
-                                <h4 class="font-medium text-gray-900 mb-2">Contact Information</h4>
-                                <div id="contact-info" class="space-y-1 text-sm text-gray-600"></div>
-                            </div>
-                            <div>
-                                <h4 class="font-medium text-gray-900 mb-2">Summary</h4>
-                                <div id="resume-summary" class="text-sm text-gray-600"></div>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <h4 class="font-medium text-gray-900 mb-3">Technical Skills</h4>
-                            <div id="skills-display" class="flex flex-wrap gap-2"></div>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div>
-                                <button class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('experience')">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="font-medium text-gray-900">Work Experience</h4>
-                                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="experience-chevron"></i>
-                                    </div>
+                            <div class="mt-6 sm:mt-8 flex justify-end">
+                                <button id="continue-to-search" class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm sm:text-base">
+                                    Continue to Job Search
                                 </button>
-                                <div id="experience-content" class="hidden mt-2 p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
                             </div>
-
-                            <div>
-                                <button class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('education')">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="font-medium text-gray-900">Education</h4>
-                                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="education-chevron"></i>
-                                    </div>
-                                </button>
-                                <div id="education-content" class="hidden mt-2 p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
-                            </div>
-
-                            <div>
-                                <button class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors" onclick="toggleSection('projects')">
-                                    <div class="flex items-center justify-between">
-                                        <h4 class="font-medium text-gray-900">Projects</h4>
-                                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-500" id="projects-chevron"></i>
-                                    </div>
-                                </button>
-                                <div id="projects-content" class="hidden mt-2 p-4 text-sm text-gray-600 bg-gray-50 rounded-lg"></div>
-                            </div>
-                        </div>
-
-                        <div class="mt-8 flex justify-end">
-                            <button id="continue-to-search" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                                Continue to Job Search
-                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Job Search Tab -->
-            <div id="tab-search" class="tab-content hidden">
-                <div class="max-w-6xl mx-auto">
-                    <div class="text-center mb-8">
-                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Find Relevant Jobs</h2>
-                        <p class="text-lg text-gray-600">Search for positions that match your profile</p>
-                    </div>
+                <!-- Job Search Tab -->
+                <div id="tab-search" class="tab-content hidden">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="text-center mb-6 sm:mb-8">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-4">Find Relevant Jobs</h2>
+                            <p class="text-base sm:text-lg text-gray-600">Search for positions that match your profile</p>
+                        </div>
 
-                    <!-- Search Form -->
-                    <div class="bg-white rounded-xl shadow-soft p-6 mb-8">
-                        <div class="grid md:grid-cols-3 gap-4">
-                            <div class="md:col-span-2">
-                                <label for="job-query" class="block text-sm font-medium text-gray-700 mb-2">Job Title / Keywords</label>
-                                <input type="text" id="job-query" placeholder="e.g., Software Engineer, Data Scientist, Product Manager" 
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                        <!-- Search Form -->
+                        <div class="bg-white rounded-xl shadow-soft p-4 sm:p-6 mb-6 sm:mb-8">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <div class="lg:col-span-2">
+                                    <label for="job-query" class="block text-sm font-medium text-gray-700 mb-2">Job Title / Keywords</label>
+                                    <input type="text" id="job-query" placeholder="e.g., Software Engineer, Data Scientist, Product Manager" 
+                                           class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                                    <div class="space-y-2">
+                                        <select id="country-select" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base">
+                                            <option value="Pakistan">Pakistan</option>
+                                            <option value="India">India</option>
+                                            <option value="USA">USA</option>
+                                        </select>
+                                        <select id="city-select" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base" disabled>
+                                            <option value="">Select City (Optional)</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                                <div class="space-y-2">
-                                    <select id="country-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-                                        <option value="Pakistan">Pakistan</option>
-                                        <option value="India">India</option>
-                                        <option value="USA">USA</option>
-                                    </select>
-                                    <select id="city-select" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500" disabled>
-                                        <option value="">Select City (Optional)</option>
+
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-6 space-y-4 sm:space-y-0">
+                                <div class="flex items-center space-x-4">
+                                    <label for="num-jobs" class="text-sm font-medium text-gray-700 whitespace-nowrap">Number of jobs:</label>
+                                    <select id="num-jobs" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
+                                        <option value="10">10</option>
+                                        <option value="20" selected>20</option>
+                                        <option value="30">30</option>
+                                        <option value="50">50</option>
                                     </select>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between mt-6">
-                            <div class="flex items-center space-x-4">
-                                <label for="num-jobs" class="text-sm font-medium text-gray-700">Number of jobs:</label>
-                                <select id="num-jobs" class="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                    <option value="10">10</option>
-                                    <option value="20" selected>20</option>
-                                    <option value="30">30</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                            <button id="search-jobs-btn" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center space-x-2">
-                                <i data-lucide="search" class="w-4 h-4"></i>
-                                <span>Search Jobs</span>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- Suggested Jobs -->
-                    <div id="suggested-jobs" class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                                    <i data-lucide="lightbulb" class="w-5 h-5 text-blue-600"></i>
-                                    <span>AI Job Suggestions</span>
-                                </h3>
-                                <p class="text-sm text-gray-600 mt-1">Based on your resume and skills</p>
-                            </div>
-                            <button id="get-suggestions-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2">
-                                <i data-lucide="sparkles" class="w-4 h-4"></i>
-                                <span>Get Suggestions</span>
-                            </button>
-                        </div>
-                        
-                        <div id="suggestions-loading" class="hidden text-center py-8">
-                            <div class="w-6 h-6 loading-spinner mx-auto mb-2">
-                                <i data-lucide="loader" class="w-6 h-6 text-blue-600"></i>
-                            </div>
-                            <p class="text-sm text-gray-600">AI is analyzing your profile...</p>
-                        </div>
-                        
-                        <div id="suggestions-content" class="hidden">
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="suggestions-grid">
-                                <!-- Suggestions will be populated here -->
-                            </div>
-                            <p class="text-xs text-gray-500 mt-3 text-center">Click any suggestion to search for those jobs</p>
-                        </div>
-                    </div>
-
-                    <!-- Search Loading -->
-                    <div id="search-loading" class="hidden bg-white rounded-xl shadow-soft p-8 text-center">
-                        <div class="w-8 h-8 loading-spinner mx-auto mb-4">
-                            <i data-lucide="loader" class="w-8 h-8 text-primary-600"></i>
-                        </div>
-                        <p class="text-gray-600">Searching for jobs and analyzing matches...</p>
-                    </div>
-
-                    <!-- Job Results -->
-                    <div id="job-results" class="hidden">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 id="results-title" class="text-2xl font-bold text-gray-900">Found Jobs</h3>
-                        </div>
-
-                        <div id="jobs-container" class="space-y-4"></div>
-
-                        <div class="mt-8 flex justify-center">
-                            <button id="continue-to-analysis" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                                Continue to Analysis
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Analysis Tab -->
-            <div id="tab-analysis" class="tab-content hidden">
-                <div class="max-w-6xl mx-auto">
-                    <div class="text-center mb-8">
-                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Skill Gap Analysis</h2>
-                        <p class="text-lg text-gray-600">AI-powered analysis of your skills vs job requirements</p>
-                    </div>
-
-                    <!-- Analysis Control -->
-                    <div class="bg-white rounded-xl shadow-soft p-6 mb-8 text-center">
-                        <p class="text-gray-600 mb-4">Analyze your profile against the top matching jobs to identify skill gaps and opportunities.</p>
-                        <button id="start-analysis-btn" class="px-8 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center space-x-2 mx-auto">
-                            <i data-lucide="brain" class="w-5 h-5"></i>
-                            <span>Start AI Analysis</span>
-                        </button>
-                    </div>
-
-                    <!-- Analysis Loading -->
-                    <div id="analysis-loading" class="hidden bg-white rounded-xl shadow-soft p-12 text-center">
-                        <div class="w-12 h-12 loading-spinner mx-auto mb-6">
-                            <i data-lucide="loader" class="w-12 h-12 text-primary-600"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Analyzing Skills</h3>
-                        <p class="text-gray-600 mb-4">AI is comparing your profile with job requirements...</p>
-                        <div class="max-w-xs mx-auto bg-gray-200 rounded-full h-2">
-                            <div id="analysis-progress" class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <!-- Analysis Results -->
-                    <div id="analysis-results" class="hidden space-y-8">
-                        <div id="analysis-tabs" class="border-b border-gray-200">
-                            <nav class="flex space-x-8" aria-label="Analysis tabs">
-                                <!-- Analysis tabs will be generated dynamically -->
-                            </nav>
-                        </div>
-
-                        <div id="analysis-content">
-                            <!-- Analysis content will be generated dynamically -->
-                        </div>
-
-                        <div class="flex justify-center">
-                            <button id="continue-to-report" class="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium">
-                                Generate Report
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Report Tab -->
-            <div id="tab-report" class="tab-content hidden">
-                <div class="max-w-6xl mx-auto">
-                    <div class="text-center mb-8">
-                        <h2 class="text-3xl font-bold text-gray-900 mb-4">Comprehensive Report</h2>
-                        <p class="text-lg text-gray-600">Complete analysis and actionable recommendations</p>
-                    </div>
-
-                    <!-- Report Loading -->
-                    <div id="report-loading" class="hidden bg-white rounded-xl shadow-soft p-8 text-center">
-                        <div class="w-8 h-8 loading-spinner mx-auto mb-4">
-                            <i data-lucide="loader" class="w-8 h-8 text-primary-600"></i>
-                        </div>
-                        <p class="text-gray-600">Generating comprehensive report...</p>
-                    </div>
-
-                    <!-- Report Content -->
-                    <div id="report-content" class="hidden space-y-8">
-                        <!-- Summary Metrics -->
-                        <div class="bg-white rounded-xl shadow-soft p-6">
-                            <h3 class="text-xl font-semibold text-gray-900 mb-6">Summary</h3>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-6" id="summary-metrics">
-                                <!-- Metrics will be generated dynamically -->
-                            </div>
-                        </div>
-
-                        <!-- Skills Analysis Charts -->
-                        <div class="grid md:grid-cols-2 gap-8">
-                            <div class="bg-white rounded-xl shadow-soft p-6">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Skills to Develop</h3>
-                                <div id="missing-skills-chart" class="space-y-3"></div>
-                            </div>
-                            <div class="bg-white rounded-xl shadow-soft p-6">
-                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Strengths</h3>
-                                <div id="strong-skills-chart" class="space-y-3"></div>
-                            </div>
-                        </div>
-
-                        <!-- Action Plan -->
-                        <div class="bg-white rounded-xl shadow-soft p-6">
-                            <h3 class="text-xl font-semibold text-gray-900 mb-6">Recommended Action Plan</h3>
-                            <div id="action-plan" class="space-y-4">
-                                <!-- Action plan will be generated dynamically -->
-                            </div>
-                        </div>
-
-                        <!-- Learning Path -->
-                        <div class="bg-white rounded-xl shadow-soft p-6">
-                            <h3 class="text-xl font-semibold text-gray-900 mb-6">Priority Learning Areas</h3>
-                            <div id="learning-path" class="space-y-4">
-                                <!-- Learning path will be generated dynamically -->
-                            </div>
-                        </div>
-
-                        <!-- Export Options -->
-                        <div class="bg-white rounded-xl shadow-soft p-6">
-                            <h3 class="text-xl font-semibold text-gray-900 mb-6">Export Report</h3>
-                            <div class="flex flex-wrap gap-4">
-                                <button id="export-json" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
-                                    <i data-lucide="file-text" class="w-4 h-4"></i>
-                                    <span>Download JSON</span>
+                                <button id="search-jobs-btn" class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center justify-center space-x-2 text-sm sm:text-base">
+                                    <i data-lucide="search" class="w-4 h-4"></i>
+                                    <span>Search Jobs</span>
                                 </button>
-                                <button id="export-csv" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
-                                    <i data-lucide="table" class="w-4 h-4"></i>
-                                    <span>Download CSV</span>
+                            </div>
+                        </div>
+
+                        <!-- Suggested Jobs -->
+                        <div id="suggested-jobs" class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-4 sm:p-6 mb-6 sm:mb-8">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-3 sm:space-y-0">
+                                <div>
+                                    <h3 class="text-base sm:text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                                        <i data-lucide="lightbulb" class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600"></i>
+                                        <span>AI Job Suggestions</span>
+                                    </h3>
+                                    <p class="text-xs sm:text-sm text-gray-600 mt-1">Based on your resume and skills</p>
+                                </div>
+                                <button id="get-suggestions-btn" class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center space-x-2 text-sm">
+                                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                    <span>Get Suggestions</span>
                                 </button>
-                                <button id="print-report" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2">
-                                    <i data-lucide="printer" class="w-4 h-4"></i>
-                                    <span>Print Report</span>
+                            </div>
+                            
+                            <div id="suggestions-loading" class="hidden text-center py-6 sm:py-8">
+                                <div class="w-6 h-6 loading-spinner mx-auto mb-2">
+                                    <i data-lucide="loader" class="w-6 h-6 text-blue-600"></i>
+                                </div>
+                                <p class="text-sm text-gray-600">AI is analyzing your profile...</p>
+                            </div>
+                            
+                            <div id="suggestions-content" class="hidden">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="suggestions-grid">
+                                    <!-- Suggestions will be populated here -->
+                                </div>
+                                <p class="text-xs text-gray-500 mt-3 text-center">Click any suggestion to search for those jobs</p>
+                            </div>
+                        </div>
+
+                        <!-- Search Loading -->
+                        <div id="search-loading" class="hidden bg-white rounded-xl shadow-soft p-6 sm:p-8 text-center">
+                            <div class="w-6 h-6 sm:w-8 sm:h-8 loading-spinner mx-auto mb-4">
+                                <i data-lucide="loader" class="w-6 h-6 sm:w-8 sm:h-8 text-primary-600"></i>
+                            </div>
+                            <p class="text-gray-600 text-sm sm:text-base">Searching for jobs and analyzing matches...</p>
+                        </div>
+
+                        <!-- Job Results -->
+                        <div id="job-results" class="hidden">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 space-y-3 sm:space-y-0">
+                                <h3 id="results-title" class="text-xl sm:text-2xl font-bold text-gray-900">Found Jobs</h3>
+                            </div>
+
+                            <div id="jobs-container" class="space-y-4"></div>
+
+                            <div class="mt-6 sm:mt-8 flex justify-center">
+                                <button id="continue-to-analysis" class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm sm:text-base">
+                                    Continue to Analysis
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </main>
 
-                <!-- Toast Notifications -->
-        <div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50"></div>
+                <!-- Analysis Tab -->
+                <div id="tab-analysis" class="tab-content hidden">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="text-center mb-6 sm:mb-8">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-4">Skill Gap Analysis</h2>
+                            <p class="text-base sm:text-lg text-gray-600">AI-powered analysis of your skills vs job requirements</p>
+                        </div>
+
+                        <!-- Analysis Control -->
+                        <div class="bg-white rounded-xl shadow-soft p-4 sm:p-6 mb-6 sm:mb-8 text-center">
+                            <p class="text-gray-600 mb-4 text-sm sm:text-base">Analyze your profile against the top matching jobs to identify skill gaps and opportunities.</p>
+                            <button id="start-analysis-btn" class="w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center justify-center space-x-2 mx-auto text-sm sm:text-base">
+                                <i data-lucide="brain" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                                <span>Start AI Analysis</span>
+                            </button>
+                        </div>
+
+                        <!-- Analysis Loading -->
+                        <div id="analysis-loading" class="hidden bg-white rounded-xl shadow-soft p-8 sm:p-12 text-center">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 loading-spinner mx-auto mb-4 sm:mb-6">
+                                <i data-lucide="loader" class="w-10 h-10 sm:w-12 sm:h-12 text-primary-600"></i>
+                            </div>
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Analyzing Skills</h3>
+                            <p class="text-gray-600 mb-4 text-sm sm:text-base">AI is comparing your profile with job requirements...</p>
+                            <div class="max-w-xs mx-auto bg-gray-200 rounded-full h-2">
+                                <div id="analysis-progress" class="bg-primary-600 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Analysis Results -->
+                        <div id="analysis-results" class="hidden space-y-6 sm:space-y-8">
+                            <div id="analysis-tabs" class="border-b border-gray-200">
+                                <nav class="flex space-x-4 sm:space-x-8 overflow-x-auto pb-2" aria-label="Analysis tabs">
+                                    <!-- Analysis tabs will be generated dynamically -->
+                                </nav>
+                            </div>
+
+                            <div id="analysis-content">
+                                <!-- Analysis content will be generated dynamically -->
+                            </div>
+
+                            <div class="flex justify-center">
+                                <button id="continue-to-report" class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm sm:text-base">
+                                    Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Tab -->
+                <div id="tab-report" class="tab-content hidden">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="text-center mb-6 sm:mb-8">
+                            <h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-4">Comprehensive Report</h2>
+                            <p class="text-base sm:text-lg text-gray-600">Complete analysis and actionable recommendations</p>
+                        </div>
+
+                        <!-- Report Loading -->
+                        <div id="report-loading" class="hidden bg-white rounded-xl shadow-soft p-6 sm:p-8 text-center">
+                            <div class="w-6 h-6 sm:w-8 sm:h-8 loading-spinner mx-auto mb-4">
+                                <i data-lucide="loader" class="w-6 h-6 sm:w-8 sm:h-8 text-primary-600"></i>
+                            </div>
+                            <p class="text-gray-600 text-sm sm:text-base">Generating comprehensive report...</p>
+                        </div>
+
+                        <!-- Report Content -->
+                        <div id="report-content" class="hidden space-y-6 sm:space-y-8">
+                            <!-- Summary Metrics -->
+                            <div class="bg-white rounded-xl shadow-soft p-4 sm:p-6">
+                                <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Summary</h3>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6" id="summary-metrics">
+                                    <!-- Metrics will be generated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Skills Analysis Charts -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+                                <div class="bg-white rounded-xl shadow-soft p-4 sm:p-6">
+                                    <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4">Skills to Develop</h3>
+                                    <div id="missing-skills-chart" class="space-y-3"></div>
+                                </div>
+                                <div class="bg-white rounded-xl shadow-soft p-4 sm:p-6">
+                                    <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-4">Your Strengths</h3>
+                                    <div id="strong-skills-chart" class="space-y-3"></div>
+                                </div>
+                            </div>
+
+                            <!-- Action Plan -->
+                            <div class="bg-white rounded-xl shadow-soft p-4 sm:p-6">
+                                <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Recommended Action Plan</h3>
+                                <div id="action-plan" class="space-y-4">
+                                    <!-- Action plan will be generated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Learning Path -->
+                            <div class="bg-white rounded-xl shadow-soft p-4 sm:p-6">
+                                <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Priority Learning Areas</h3>
+                                <div id="learning-path" class="space-y-4">
+                                    <!-- Learning path will be generated dynamically -->
+                                </div>
+                            </div>
+
+                            <!-- Export Options -->
+                            <div class="bg-white rounded-xl shadow-soft p-4 sm:p-6">
+                                <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">Export Report</h3>
+                                <div class="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
+                                    <button id="export-json" class="flex-1 sm:flex-none px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center space-x-2 text-sm">
+                                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                                        <span>Download JSON</span>
+                                    </button>
+                                    <button id="export-csv" class="flex-1 sm:flex-none px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center space-x-2 text-sm">
+                                        <i data-lucide="table" class="w-4 h-4"></i>
+                                        <span>Download CSV</span>
+                                    </button>
+                                    <button id="print-report" class="flex-1 sm:flex-none px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center justify-center space-x-2 text-sm">
+                                        <i data-lucide="printer" class="w-4 h-4"></i>
+                                        <span>Print Report</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Toast Notifications -->
+            <div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50"></div>
+        </div> <!-- closes #main-app -->
     </div> <!-- closes #app -->
 
     <script type="module" src="/src/main.ts"></script>
