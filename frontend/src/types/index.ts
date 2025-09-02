@@ -52,6 +52,7 @@ export interface JobAnalysis {
   job_info: {
     title: string;
     company: string;
+    company_name?: string;
     location: string;
     apply_link: string;
     similarity_score: number;

@@ -1,6 +1,8 @@
 // frontend/src/main.ts
 import './style.css';
 import { apiService } from './utils/api';
+import { showErrorMessage, showSuccessMessage } from './components/ErrorManager';
+
 import { 
   formatFileSize, 
   getMatchColor, 
@@ -49,34 +51,12 @@ const appState = new AppState();
 
 // Utility functions
 
-const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
-  const toast = document.createElement('div');
-  toast.className = `toast ${type} slide-up`;
-  
-  const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'x-circle' : 'alert-triangle';
-  const iconColor = type === 'success' ? 'text-green-600' : type === 'error' ? 'text-red-600' : 'text-yellow-600';
-  
-  toast.innerHTML = `
-    <div class="flex items-center space-x-3">
-      <i data-lucide="${icon}" class="w-5 h-5 ${iconColor}"></i>
-      <span class="text-sm font-medium text-gray-900">${message}</span>
-      <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-gray-400 hover:text-gray-600">
-        <i data-lucide="x" class="w-4 h-4"></i>
-      </button>
-    </div>
-  `;
-  
-  document.getElementById('toast-container')?.appendChild(toast);
-  
-  // Initialize lucide icons for the toast
-  if (window.lucide) {
-    window.lucide.createIcons();
+export const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
+  if (type === 'success') {
+    showSuccessMessage(message);
+  } else {
+    showErrorMessage(message);
   }
-  
-  // Auto remove after 5 seconds
-  setTimeout(() => {
-    toast.remove();
-  }, 5000);
 };
 
 const updateStepIndicator = (currentStep: TabType) => {
@@ -796,6 +776,7 @@ const searchJobs = async () => {
     // Show loading
     searchLoading?.classList.remove('hidden');
     jobResults?.classList.add('hidden');
+    searchLoading?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
     // Search jobs
     const searchResult = await apiService.searchJobs(jobQuery, location, numJobs);
@@ -1118,7 +1099,7 @@ const showAnalysisTab = (index: number) => {
         <div class="flex items-center space-x-4 text-gray-600">
           <span class="flex items-center space-x-1">
             <i data-lucide="building" class="w-4 h-4"></i>
-            <span>${jobInfo.company || 'Unknown Company'}</span>
+            <span>${jobInfo.company_name || jobInfo.company || 'Unknown Company'}</span>
           </span>
           <span class="flex items-center space-x-1">
             <i data-lucide="map-pin" class="w-4 h-4"></i>
@@ -1665,28 +1646,46 @@ const setupEventListeners = () => {
   });
   
   document.getElementById('country-select')?.addEventListener('change', async (e) => {
-    const country = (e.target as HTMLSelectElement).value;
-    const citySelect = document.getElementById('city-select') as HTMLSelectElement;
+  const country = (e.target as HTMLSelectElement).value;
+  const citySelect = document.getElementById('city-select') as HTMLSelectElement;
+  
+  try {
+    citySelect.disabled = true;
+    citySelect.innerHTML = '<option value="">Loading cities...</option>';
     
-    try {
-      citySelect.disabled = true;
-      citySelect.innerHTML = '<option value="">Loading cities...</option>';
-      
-      const result = await apiService.getCities(country);
-      
-      citySelect.innerHTML = '<option value="">Select City (Optional)</option>';
-      result.cities.forEach(city => {
-        const option = document.createElement('option');
-        option.value = city;
-        option.textContent = city;
-        citySelect.appendChild(option);
-      });
-      citySelect.disabled = false;
-    } catch (error) {
-      citySelect.innerHTML = '<option value="">Error loading cities</option>';
-      showToast('Error loading cities', 'error');
-    }
-  });
+    const result = await apiService.getCities(country);
+    
+    citySelect.innerHTML = '<option value="">Select City (Optional)</option>';
+    result.cities.forEach(city => {
+      const option = document.createElement('option');
+      option.value = city;
+      option.textContent = city;
+      citySelect.appendChild(option);
+    });
+    citySelect.disabled = false;
+  } catch (error) {
+    citySelect.innerHTML = '<option value="">Error loading cities</option>';
+    showToast('Error loading cities', 'error');
+  }
+});
+
+// Add this new event listener for initial Pakistan cities load
+document.addEventListener('DOMContentLoaded', async () => {
+  const citySelect = document.getElementById('city-select') as HTMLSelectElement;
+  try {
+    const result = await apiService.getCities('Pakistan');
+    citySelect.innerHTML = '<option value="">Select City (Optional)</option>';
+    result.cities.forEach(city => {
+      const option = document.createElement('option');
+      option.value = city;
+      option.textContent = city;
+      citySelect.appendChild(option);
+    });
+    citySelect.disabled = false;
+  } catch (error) {
+    console.error('Error loading initial cities:', error);
+  }
+});
   // Add in setupEventListeners function
   document.getElementById('get-suggestions-btn')?.addEventListener('click', getSuggestions);
   

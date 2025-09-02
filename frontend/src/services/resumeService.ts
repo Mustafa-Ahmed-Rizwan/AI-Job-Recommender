@@ -1,8 +1,8 @@
 // frontend/src/services/resumeService.ts
-import { doc, setDoc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
-import { authService } from './authService';
-import type { ResumeInfo } from '../types';
+import type { ResumeInfo } from '../types/index.js';
+import { authService } from './authService.js';
 
 export interface ResumeRecord {
   id: string;
