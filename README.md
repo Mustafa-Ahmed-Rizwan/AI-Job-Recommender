@@ -1,4 +1,4 @@
-# AI Job Recemmonder
+# AI Job Recommender
 
 A full-stack application that provides AI-powered job recommendations and skill gap analysis by comparing your resume with job market requirements.
 
@@ -278,5 +278,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Pinecone for vector database capabilities
 - SerpAPI for job search functionality
 - Astral team for the lightning-fast uv package manager
+
 
 
