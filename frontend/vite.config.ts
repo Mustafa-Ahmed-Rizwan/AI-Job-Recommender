@@ -1,12 +1,14 @@
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
 export default defineConfig({
-  root: '.', // Set root to current directory
+  plugins: [react()],
+  root: '.',
   server: {
     port: 3000,
     open: true,
-    host: true, // Allow external access
+    host: true,
   },
   build: {
     target: 'esnext',
@@ -14,9 +16,14 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'), // Explicitly point to index.html
+        main: resolve(__dirname, 'index.html'),
       },
     },
   },
-  publicDir: 'public', // Ensure public directory exists
+  publicDir: 'public',
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
+  },
 })

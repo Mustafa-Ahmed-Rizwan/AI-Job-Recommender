@@ -3,7 +3,7 @@ import json
 import re   
 from typing import Dict, List, Any, Tuple
 from urllib import response
-from backend.src.helper import ask_with_fallback  # Your LLM manager
+from src.helper import ask_with_fallback  # Your LLM manager
 
 
 class SkillGapAnalyzer:

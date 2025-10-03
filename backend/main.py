@@ -12,10 +12,10 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 # Import your existing modules
-from backend.src.resume_processor import ResumeProcessor
-from backend.src.skill_analyzer import SkillGapAnalyzer
-from backend.src.job_api import fetch_jobs
-from backend.middleware.auth import get_current_user, get_verified_user
+from src.resume_processor import ResumeProcessor
+from src.skill_analyzer import SkillGapAnalyzer
+from src.job_api import fetch_jobs
+from middleware.auth import get_current_user, get_verified_user
 from fastapi import Depends
 
 # Setup logging
